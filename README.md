@@ -26,7 +26,7 @@ A skill for migrating `docker run` commands and Docker Compose-style deployments
 - prefer maintainable output over mechanical one-to-one translation
 - default to review-first output in the current directory before installation
 - prefer pod-first topology over preserving bridge networking when pod grouping expresses the intent cleanly
-- copy runtime-required files to their correct host-side destinations, not just into the Quadlet unit directory
+- ensure runtime-required support files remain in the reviewed current-directory deliverable set and are referenced from Quadlet via absolute host paths, rather than being copied by `install.sh` into the Quadlet unit directory
 
 ## Operating modes
 

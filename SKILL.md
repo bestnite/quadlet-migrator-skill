@@ -138,6 +138,8 @@ Tasks in this phase:
 2. Freeze the storage strategy.
    - named volume, bind mount, or anonymous volume per storage use case
    - bind mounts must end up as absolute host paths
+   - preserve bind-mount shape from the source input: a file bind mount must stay a file bind mount, and a directory bind mount must stay a directory bind mount
+   - do not widen a file mount into a directory mount, or collapse a directory mount into a file mount, unless the source is genuinely ambiguous or the upstream deployment docs explicitly require a different reviewed mapping
 
 3. Freeze the image strategy.
    - prefer upstream prebuilt registry images when they already exist and local build is not required for correctness
@@ -216,10 +218,10 @@ Tasks in this phase:
 3. Generate helper scripts such as `install.sh`, `uninstall.sh`, `reload.sh`, `start.sh`, `stop.sh`, and `restart.sh` when they materially help the user apply and operate the result.
    - Use `install.sh` as the default and canonical script name for applying the reviewed artifact set.
    - Do not also generate `apply.sh` unless the user explicitly asks for that alternate name.
-   - `install.sh` should copy only Quadlet unit files into the chosen Quadlet target directory. It should copy env files, mounted config, scripts, and other required runtime support files into the correct host-side paths the deployment actually expects.
+   - `install.sh` should copy only Quadlet unit files into the chosen Quadlet target directory. Required env files, mounted config, scripts, and other runtime support files should remain in the reviewed current-directory deliverable set and be referenced from Quadlet via absolute host paths.
    - `install.sh` should not start, stop, restart, or reload services as a side effect.
-   - `uninstall.sh` should remove only the previously installed reviewed artifact set from the chosen Quadlet target directory and the corresponding host-side runtime support-file paths.
-   - `uninstall.sh` should stop affected services before removing their installed units or runtime support files, and should not delete unrelated files, shared directories, named volumes, images, or Podman objects unless the user explicitly asks for that broader cleanup.
+   - `uninstall.sh` should remove only the previously installed reviewed Quadlet unit files from the chosen Quadlet target directory.
+   - `uninstall.sh` should stop affected services before removing their installed unit files, and should not delete support files from the current-directory deliverable set, unrelated files, shared directories, named volumes, images, or Podman objects unless the user explicitly asks for that broader cleanup.
    - `reload.sh`, `start.sh`, `stop.sh`, and `restart.sh` should manage services only and should not silently install or overwrite files.
    - when a generated topology includes `<name>.pod` plus child containers linked with `Pod=<name>.pod`, make the pod service the lifecycle entrypoint in helper scripts; derive that service name from `ServiceName=` when present on the `.pod`, otherwise use Quadlet's default generated pod service name. Do not emit redundant `systemctl start/stop/restart` lines for each child container that is already managed through the pod service.
 4. If the deployment depends on repo-local support files or directories, generate or copy those reviewed artifacts into the current-directory deliverable set as well.
@@ -321,7 +323,7 @@ When the user wants runnable output, provide the relevant deployment notes from 
 At minimum, mention the need to:
 
 - review the generated files in the current directory
-- apply the reviewed files into the correct Quadlet directory and host-side runtime paths
+- apply the reviewed Quadlet files into the correct Quadlet directory while keeping support files in the current directory at the absolute paths referenced by the units
 - run `systemctl daemon-reload` or `systemctl --user daemon-reload`
 - create required bind-mount directories before first start
 - verify generator output or systemd unit validity when startup fails

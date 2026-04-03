@@ -46,6 +46,8 @@ Use this file when converting `docker-compose.yml` or `compose.yaml` into Quadle
 
 - Bind mounts become `Volume=HOST:CONTAINER[:OPTIONS]`.
 - Normalize relative host paths against the Compose file directory and emit absolute paths in the final Quadlet output.
+- Preserve bind-mount shape from the source input: a file bind mount must stay a file bind mount, and a directory bind mount must stay a directory bind mount.
+- Do not widen a file mount into a directory mount, or collapse a directory mount into a file mount, unless the source is genuinely ambiguous or the upstream deployment docs explicitly require a different reviewed mapping.
 - Named volumes can remain referenced by name, but when the user wants explicit infrastructure-as-code, create matching `.volume` units.
 - Ask the user which volume mode they want when the source does not make the intended persistence model obvious.
 - If a bind mount points to a repo-local file or directory, include that source in the reviewable deliverable set unless the user explicitly wants a host-managed external path instead.
