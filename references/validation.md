@@ -62,6 +62,7 @@ Before calling the result runnable, verify that:
 - required env keys are actually present in the final env sources
 - bind-mounted files and directories exist at the absolute paths referenced by the generated Quadlet files
 - bind-mounted file-versus-directory shape still matches the source input
+- when sibling containers in the same pod must connect to a service, its effective listen address is reachable within the pod namespace (`127.0.0.1` or `0.0.0.0`, unless upstream docs require another reachable bind address)
 - repo-local entrypoint or helper scripts referenced by the container exist and are executable when needed
 - initialization assets such as `init.sql`, seeds, bootstrap files, or config templates are present where the deployment expects them
 
@@ -72,6 +73,7 @@ Runnable-output gate checklist template:
 - [ ] unit files are installed in the intended Quadlet directory
 - [ ] support files remain available at the absolute paths expected by mounts and scripts
 - [ ] bind-mounted file-versus-directory shape still matches the source input
+- [ ] intra-pod service listeners that must accept sibling-container traffic are reachable on `127.0.0.1` or `0.0.0.0`, unless upstream docs require another reviewed bind address
 - [ ] service-management scripts operate on the same artifact set that was reviewed
 - [ ] no required support file, env key, or typo-suspect mismatch remains unresolved
 

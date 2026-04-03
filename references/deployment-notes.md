@@ -40,6 +40,7 @@ Keep installation separate from service-management scripts so the user can revie
 `reload.sh`, `start.sh`, `stop.sh`, and `restart.sh` should not silently install or overwrite reviewed files.
 Do not use `ServiceName=` as an application connection target. It controls the generated systemd unit name only. When services communicate over a shared network outside a single pod namespace, prefer container names, pod names, or explicit `NetworkAlias=` values.
 Within a single pod, use `127.0.0.1` / `localhost` for container-to-container communication instead of generating `AddHost=` entries whose purpose is sibling-container discovery.
+If a service inside the pod must accept connections from sibling containers, ensure its effective listen address is reachable within the shared pod namespace, typically `127.0.0.1` or `0.0.0.0`. When the upstream service exposes this through environment variables or similar runtime configuration, preserve or generate that setting explicitly.
 
 ## Review checklist before install
 

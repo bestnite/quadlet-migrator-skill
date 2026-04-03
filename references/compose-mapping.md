@@ -60,6 +60,8 @@ Use this file when converting `docker-compose.yml` or `compose.yaml` into Quadle
 - If the source uses bridge networking for containers that can reasonably live in one pod, collapse that topology into one `.pod` so the containers share one network namespace.
 - Create a `.network` unit only when services must be split across pods, or when explicit network isolation or custom network management is materially required.
 - Containers in the same `.pod` can communicate over `127.0.0.1` / `localhost` because they share a network namespace.
+- When services in the same `.pod` must accept connections from sibling containers, ensure they listen on `127.0.0.1` or `0.0.0.0`; if they listen only on another interface, sibling containers in the pod may not be able to reach them.
+- When the upstream service supports configuring the listen address via environment variables or equivalent runtime settings, preserve or generate the necessary configuration instead of assuming the default bind address is correct.
 - When `Pod=` is set, never generate `AddHost=` entries whose purpose is sibling-container discovery inside that pod; intra-pod communication should use `127.0.0.1` / `localhost` instead.
 - `AddHost=` is a host-to-IP override, not an intra-pod service-discovery mechanism. Upstream Quadlet documents `AddHost=` in both `[Container]` and `[Pod]`, so do not describe `Pod=` as a blanket prohibition on `AddHost=` unless the upstream reference explicitly requires that for the case at hand.
 - Containers in different pods must not be treated as reachable via `127.0.0.1` / `localhost`.
