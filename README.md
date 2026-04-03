@@ -2,58 +2,58 @@
 
 [English](./README.md) | [简体中文](./README.zh-CN.md)
 
-A skill for migrating `docker run` commands and Docker Compose-style deployments into maintainable Podman Quadlet units.
+A skill that helps turn `docker run` commands and Docker Compose setups into Podman Quadlet files you can review, adjust, and apply.
 
 ## What it does
 
-- translates `docker run` and Compose-style inputs into Quadlet-oriented designs
-- writes generated artifacts to the current directory by default so they can be reviewed before being applied
-- asks about the output location only when the user requested another location or an existing-file conflict requires a decision
-- helps decide between `.container`, `.pod`, `.network`, `.volume`, and `.build`, with a pod-first bias for multi-container services
-- preserves `.env` / `env_file` workflows when appropriate
-- reduces large env templates into a small set of high-impact deployment questions
-- can generate helper scripts with `install.sh` as the canonical apply step, plus `uninstall.sh`, `reload.sh`, `start.sh`, `stop.sh`, and `restart.sh`
-- identifies required repo-local support files such as mounted config, init assets, and helper scripts that must ship with the result
-- validates env completeness before claiming runnable output
-- encourages explicit planning questions plus finalize and execution checklists for support files and env completeness
-- supports opt-in `AutoUpdate=registry` planning when the approved image strategy uses fully qualified registry images
-- explains rootless vs rootful apply targets, deployment notes, and validation steps
+- converts `docker run` commands and Docker Compose setups into Podman Quadlet files
+- writes the generated files to the current directory first so you can review them before installing them
+- asks about the output location only when you already requested another location or existing files would conflict
+- helps choose between `.container`, `.pod`, `.network`, `.volume`, and `.build`, usually preferring a pod for related multi-container services
+- keeps `.env` / `env_file` workflows when they still fit the deployment
+- turns large env templates into a short list of decisions the user actually needs to make
+- can generate helper scripts such as `install.sh`, `uninstall.sh`, `reload.sh`, `start.sh`, `stop.sh`, and `restart.sh`
+- finds files from the current project that the service still needs when it runs, such as mounted config, setup data, and helper scripts
+- checks that env files are complete before calling the result runnable
+- asks the user to confirm important deployment choices during planning, then uses clear review and execution checklists
+- can optionally plan `AutoUpdate=registry` when the chosen image uses a complete image name that includes the registry, such as `docker.io/...` or `ghcr.io/...`
+- explains rootless vs rootful install paths, deployment notes, and validation steps
 
 ## Design principles
 
-- prefer the lightest operating mode that matches the request
-- separate planning, review, and generation into explicit phases
+- use the simplest mode that fits the request
+- keep planning, review, and file generation as separate steps
 - do not invent deployment-specific values
-- make lossy mappings explicit
-- prefer maintainable output over mechanical one-to-one translation
-- default to review-first output in the current directory before installation
-- prefer pod-first topology over preserving bridge networking when pod grouping expresses the intent cleanly
-- ensure runtime-required support files remain in the reviewed current-directory deliverable set and are referenced from Quadlet via absolute host paths, rather than being copied by `install.sh` into the Quadlet unit directory
+- call out behavior changes when a mapping is lossy
+- prefer output that is easy to understand and maintain
+- write files to the current directory for review before installation
+- prefer pod-based grouping when it is the clearest fit for a multi-container service
+- keep required extra files in the reviewed output and point to them with absolute paths on the host machine instead of copying them into the Quadlet unit directory
 
 ## Operating modes
 
-- `advice`: explain mappings or review source inputs without writing final artifacts
-- `design`: perform planning and interactive finalize review, then stop before runnable artifact generation
-- `generate`: produce approved runnable artifacts after planning, interactive finalize review, and execution
+- `advice`: explain the mapping, review source inputs, or answer targeted questions without writing final files
+- `design`: do planning and a final interactive review, then stop before generating runnable files
+- `generate`: do planning, the final interactive review, and execution, then generate the approved runnable files
 
 ## Workflow
 
-The full workflow has three explicit phases: `Planning`, `Finalize`, and `Execution`.
+The workflow has three phases: `Planning`, `Finalize`, and `Execution`.
 
-- `advice` usually stays in `Planning` or gives a targeted answer without entering all phases
-- `design` uses `Planning` and `Finalize`
-- `generate` uses all three phases
+- `advice` usually stays in `Planning` or answers a focused question directly
+- `design` includes `Planning` and `Finalize`
+- `generate` includes all three phases
 
-Planning must ask the user to confirm unresolved high-impact decisions before moving forward.
-Finalize happens as an interactive review in conversation after those planning questions have already been discussed.
-Execution starts only after the user has reviewed and confirmed the finalize review or requested edits.
+Planning is where unresolved deployment decisions are gathered and confirmed with the user.
+Finalize is a review step in the conversation after those decisions have been discussed.
+Execution starts only after the user approves that review.
 
 ## References
 
 - `SKILL.md` contains the operating modes, workflow, and high-level rules
 - `references/compose-mapping.md` covers field mapping and topology decisions
 - `references/env-strategy.md` covers env handling, completeness validation, and typo detection
-- `references/github-repo-intake.md` covers repository discovery and canonical input selection
+- `references/github-repo-intake.md` covers how the skill finds the right repository entry point
 - `references/deployment-notes.md` covers deployment guidance
 - `references/validation.md` covers validation and troubleshooting
 

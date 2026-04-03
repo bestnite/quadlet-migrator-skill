@@ -278,7 +278,8 @@ Decide early whether the deployment is rootless or rootful, because this changes
 - For rootful deployments, the default apply target directory is `/etc/containers/systemd/` unless the user asks for a different placement.
 - For rootless long-running services, remind the user about lingering if relevant. See `references/deployment-notes.md`.
 
-When you need authoritative details about supported search paths, unit semantics, option names, or debugging, read `references/podman-systemd.unit.5.md`.
+When you need authoritative details about supported search paths, unit semantics, option names, generated-service behavior, or debugging, read `references/podman-systemd.unit.5.md`.
+If a Quadlet mapping, option meaning, or supported behavior is unclear or seems to conflict with higher-level guidance, treat `references/podman-systemd.unit.5.md` as the gold standard for Quadlet-specific behavior and align the result to it.
 
 ## Reference routing
 
