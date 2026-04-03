@@ -4,11 +4,12 @@ Use this file when the user asks how to verify or troubleshoot generated Quadlet
 
 ## Basic deployment flow
 
-1. Review the generated files in the current working directory and confirm the expected Quadlet units, env files, helper scripts, and required repo-local support files exist.
-2. Run `install.sh` to copy only the reviewed Quadlet unit files into the target Quadlet directory.
-3. Run the appropriate reload command.
-4. Start the relevant units and inspect their status.
-5. If needed, run `uninstall.sh` to remove the installed reviewed artifact set before regenerating or abandoning the deployment.
+1. Review the generated files in the current working directory by default, or in another user-requested output directory, and confirm the expected Quadlet units, env files, helper scripts, and required repo-local support files exist.
+2. Confirm the user has already reviewed the finalize snapshot and approved execution, or requested edits that were incorporated before writing runnable artifacts.
+3. Run `install.sh` to copy only the reviewed Quadlet unit files into the target Quadlet directory.
+4. Run the appropriate reload command.
+5. Start the relevant units and inspect their status.
+6. If needed, run `uninstall.sh` to remove the installed reviewed artifact set before regenerating or abandoning the deployment.
 
 If the user requested an alternate apply script name explicitly, substitute that name where needed, but treat `install.sh` as the default documentation path.
 
@@ -59,20 +60,25 @@ systemd-analyze --user verify <unit>.service
 Before calling the result runnable, verify that:
 
 - every referenced `EnvironmentFile=` exists at the path referenced by the installed unit
-- required env keys are actually present in the final env sources
+- required env keys are actually present in the final env sources, or are explicitly surfaced as unresolved placeholders
 - bind-mounted files and directories exist at the absolute paths referenced by the generated Quadlet files
 - bind-mounted file-versus-directory shape still matches the source input
+- if `AutoUpdate=registry` is enabled, the generated unit uses a fully qualified image reference
 - when sibling containers in the same pod must connect to a service, its effective listen address is reachable within the pod namespace (`127.0.0.1` or `0.0.0.0`, unless upstream docs require another reachable bind address)
 - repo-local entrypoint or helper scripts referenced by the container exist and are executable when needed
 - initialization assets such as `init.sql`, seeds, bootstrap files, or config templates are present where the deployment expects them
+- service-management scripts operate on the same reviewed artifact set that finalize approved
 
 Runnable-output gate checklist template:
 
 - [ ] the support-file set is complete
+- [ ] every `EnvironmentFile=` path resolves to an actual reviewed file
 - [ ] env completeness check passed against the actual final env sources
+- [ ] startup-critical env keys are present, or explicitly marked as unresolved placeholders
 - [ ] unit files are installed in the intended Quadlet directory
 - [ ] support files remain available at the absolute paths expected by mounts and scripts
 - [ ] bind-mounted file-versus-directory shape still matches the source input
+- [ ] if `AutoUpdate=registry` is enabled, the generated unit uses a fully qualified image reference
 - [ ] intra-pod service listeners that must accept sibling-container traffic are reachable on `127.0.0.1` or `0.0.0.0`, unless upstream docs require another reviewed bind address
 - [ ] service-management scripts operate on the same artifact set that was reviewed
 - [ ] no required support file, env key, or typo-suspect mismatch remains unresolved
@@ -82,6 +88,7 @@ Do not call the result runnable until every item above is checked.
 ## Common failure causes
 
 - unsupported Quadlet option for the installed Podman version
+- `AutoUpdate=registry` was enabled but the image reference is not fully qualified
 - bind-mount source directory missing
 - files were generated but `install.sh` has not yet copied the unit files into the target rootless or rootful unit directory
 - wrong rootless or rootful apply target directory

@@ -8,13 +8,15 @@
 
 - 将 `docker run` 和 Compose 风格输入转换为面向 Quadlet 的设计
 - 默认先把生成产物写到当前目录，便于审查后再应用
+- 只有在用户已要求其他位置，或现有文件冲突需要决策时，才询问输出位置
 - 帮助在 `.container`、`.pod`、`.network`、`.volume`、`.build` 之间做选择，并对多容器服务默认偏向 pod-first 拓扑
 - 在合适时保留 `.env` / `env_file` 工作流
 - 将大型 env 模板归纳为少量高影响部署问题
 - 可生成辅助脚本，其中 `install.sh` 是规范的 apply 步骤，另可生成 `uninstall.sh`、`reload.sh`、`start.sh`、`stop.sh`、`restart.sh`
 - 会识别并交付运行所需的 repo 内配套文件，例如挂载配置、初始化资源和辅助脚本
 - 在声称结果可运行前，会检查环境变量完整性，而不是只做 env 摘要
-- 鼓励在 finalize 与 execution 阶段显式使用 support files 与 env completeness 检查清单
+- 鼓励在 planning 阶段显式提出高影响问题，并在 finalize 与 execution 阶段使用 support files 与 env completeness 检查清单
+- 当已批准的镜像策略使用 fully qualified registry images 时，可规划 opt-in 的 `AutoUpdate=registry`
 - 说明 rootless / rootful 应用目标路径、部署说明与验证步骤
 
 ## 设计原则
@@ -26,13 +28,25 @@
 - 优先输出可维护的结果，而不是机械一比一转换
 - 默认先输出到当前目录供审查，再执行安装
 - 当 pod 分组已经能清晰表达意图时，优先采用 pod-first 拓扑而不是保留 bridge 网络
-- 将运行必需文件复制到各自正确的主机路径，而不只是复制到 Quadlet 单元目录
+- 确保运行所需的 support files 保留在已审阅的当前目录交付集中，并通过绝对主机路径被 Quadlet 引用，而不是由 `install.sh` 复制进 Quadlet 单元目录
 
 ## 运行模式
 
 - `advice`：解释映射方式或审查输入，不写最终产物
-- `design`：执行 planning 和 finalize 审阅，但在生成可运行产物前停止
-- `generate`：在 planning 和 finalize 审阅通过后，生成已批准的可运行产物
+- `design`：执行 planning 和交互式 finalize 审阅，但在生成可运行产物前停止
+- `generate`：在 planning、交互式 finalize 审阅和 execution 之后，生成已批准的可运行产物
+
+## 工作流
+
+完整工作流分为三个明确阶段：`Planning`、`Finalize`、`Execution`。
+
+- `advice` 通常停留在 `Planning`，或给出不进入全流程的定向答复
+- `design` 使用 `Planning` 和 `Finalize`
+- `generate` 使用全部三个阶段
+
+Planning 必须先向用户确认仍未解决的高影响决策，之后才能继续。
+Finalize 会在这些 planning 问题已经讨论过之后，以对话方式进行交互式审阅。
+只有在用户审阅并确认 finalize 审阅结果或提出修改后，才能进入 Execution。
 
 ## 文档说明
 

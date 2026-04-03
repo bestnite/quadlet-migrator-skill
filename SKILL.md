@@ -17,7 +17,7 @@ This skill helps you:
 - translate `docker run` flags and Compose service fields into Quadlet units
 - choose between `.container`, `.pod`, `.network`, `.volume`, and `.build`, with a pod-first bias for multi-container services
 - decide whether values belong in `Environment=` or `EnvironmentFile=`
-- write reviewable output to the current directory by default before the user applies it to a live Quadlet search path
+- write reviewable output to the current directory by default, unless the user requested another output directory or an existing-file conflict requires a decision before writing
 - generate helper scripts with `install.sh` as the canonical apply script name, plus `uninstall.sh`, `reload.sh`, `start.sh`, `stop.sh`, and `restart.sh` when producing runnable artifacts
 - identify required repo-local companion files such as config files, templates, seed data, or initialization assets that must be shipped alongside Quadlet output for the deployment to run correctly
 - validate env completeness before claiming runnable output, including missing required keys and suspicious env-key mismatches
@@ -30,8 +30,8 @@ This skill helps you:
 Choose the lightest mode that satisfies the user's request.
 
 - `advice`: explain mappings, review source inputs, answer targeted migration questions, or sketch a recommended structure without writing final artifacts
-- `design`: perform `Planning` and `Finalize`, produce `QUADLET-FINALIZE.md`, but stop before writing runnable artifacts
-- `generate`: perform `Planning`, `Finalize`, and `Execution`, then write the approved runnable artifacts
+- `design`: perform `Planning` and interactive `Finalize` review, then stop before writing runnable artifacts
+- `generate`: perform `Planning`, interactive `Finalize` review, and `Execution`, then write the approved runnable artifacts
 
 Do not force `generate` mode when the user only wants explanation, review, or a partial conversion.
 
@@ -90,6 +90,9 @@ Tasks in this phase:
    - volume mode selection: named volume, bind mount, or anonymous volume
    - rootless vs rootful deployment mode
    - whether secrets should stay in env files or be moved elsewhere
+   - whether to opt into `AutoUpdate=registry` when the approved image strategy uses fully qualified registry images and the user wants runnable output
+   - whether a user-requested non-default output directory should override the current-directory default
+   - how to resolve any existing-file conflicts in the chosen output directory before writing runnable artifacts
 
 Do not silently invent deployment-specific values. If the repository or compose file provides placeholders, defaults, or examples, read the surrounding documentation and comments yourself, infer the intended meaning, and only ask the user to confirm the values that materially affect deployment.
 
@@ -98,21 +101,22 @@ Do not assume runnable output is complete when Quadlet files exist but required 
 
 When many variables exist, do not hand the raw `.env.example` back to the user for manual review. Your job is to digest it, reduce it, and produce a concise checklist of high-impact decisions. Prioritize the variables that are required to produce a safe and runnable output.
 
-At the end of planning, summarize what you learned and what you intend to generate, then explicitly ask the user whether anything should be changed or added before you move to the next phase.
+At the end of planning, summarize what you learned, state the proposed output location, state whether `AutoUpdate=registry` is in scope, and explicitly ask the user whether anything should be changed or added before you move to finalize review.
 
 Planning is also the phase where you must actively ask the user for the unresolved high-impact decisions you identified.
+If the approved runnable path would use fully qualified registry image references, ask before finalize whether the user wants to opt into `AutoUpdate=registry`.
+If the image strategy does not yield a fully qualified registry image reference, do not force or imply that `AutoUpdate=registry` is available.
+If the user did not request a different output directory, treat the current working directory as the default deliverable location and say so explicitly during planning instead of asking an unnecessary directory question.
+If the user already requested another output directory, honor that request unless it conflicts with a higher-priority source of truth.
+If files that would be written already exist in the chosen output directory, stop before writing and ask the user whether to overwrite, update selectively, or choose a different location.
 
-Do not defer first-time decision gathering into `QUADLET-FINALIZE.md`.
+Do not defer first-time decision gathering into finalize review.
 
-If decisions are still unresolved, stop in planning and ask the user directly. Do not write `QUADLET-FINALIZE.md` yet.
+If decisions are still unresolved, stop in planning and ask the user directly. Do not enter finalize review yet.
 
 ### Finalize phase
 
-Goal: consolidate the decisions already made in planning into one internally consistent design snapshot and ask the user to review it.
-
-The output of this phase must be written to a Markdown file named `QUADLET-FINALIZE.md`.
-
-This filename is fixed. Do not rename it per project.
+Goal: consolidate the decisions already made in planning into one internally consistent design snapshot and ask the user to review it in conversation.
 
 This phase starts only after planning-phase questions have been asked and the user has had a chance to answer or explicitly say there is nothing more to add.
 
@@ -151,6 +155,7 @@ Tasks in this phase:
    - for images of the form `name[:tag]` with no namespace, normalize to `docker.io/library/name[:tag]`
    - for images of the form `namespace/name[:tag]` with no registry, normalize to `docker.io/namespace/name[:tag]`
    - if the source clearly points to another registry such as `ghcr.io`, `quay.io`, or a private registry, preserve that registry explicitly
+   - if the approved image strategy uses fully qualified registry images and the user opted in earlier, include `AutoUpdate=registry` in the finalized design snapshot; otherwise leave it out
 
 4. Freeze the environment strategy.
    - use `Environment=` for a small number of stable non-sensitive values
@@ -169,8 +174,9 @@ Tasks in this phase:
    - suspicious env-key mismatches or typo candidates
    - missing required repo-local support files or directories
    - mismatch between requested deployment mode and selected file locations
+   - existing-file conflicts in the chosen output directory and the agreed handling for them
 
-At the end of finalize, write `QUADLET-FINALIZE.md` and ask the user to review it before you start writing the final artifacts.
+At the end of finalize, present the finalized design snapshot in conversation and ask the user to review it before you start writing the final artifacts.
 
 Before finalizing, use this checklist template:
 
@@ -178,36 +184,14 @@ Before finalizing, use this checklist template:
 - [ ] support files classified as upstream-preserved, locally generated, or locally rewritten
 - [ ] env keys classified into satisfied, unresolved, default-derived, and typo-suspect states
 - [ ] finalized file list reflects everything the runtime needs, not just Quadlet units
+- [ ] output location and any existing-file conflicts have an explicit plan
 - [ ] any remaining placeholders are explicit and understood as non-runnable until filled
 
+Finalize review is a review conversation, not a questionnaire and not a required markdown file. It should summarize decisions that were already discussed in planning.
 
-`QUADLET-FINALIZE.md` is a review artifact, not a questionnaire. It should summarize decisions that were already discussed in planning.
+Do not start execution until the user has reviewed and confirmed the finalize snapshot or provided requested edits.
 
-If `QUADLET-FINALIZE.md` already exists, read it first and update it intentionally. Do not blindly overwrite it without checking whether it reflects a prior review round that should be preserved or revised.
-
-When the design has materially changed, replace outdated sections so the file remains a single current review snapshot rather than an append-only log.
-
-`QUADLET-FINALIZE.md` should include:
-
-- source inputs you chose and why
-- selected services and omitted optional services
-- pod layout
-- naming prefix
-- image strategy
-- volume strategy
-- env strategy
-- env completeness status, including unresolved required variables and suspicious typo candidates
-- repo-local support files and directories that must be copied, preserved, or rendered for the deployment to run
-- which support files come from upstream unchanged versus which are generated or rewritten locally
-- the intended apply target directory for rootless or rootful deployment
-- the intended host-side destination paths for required support files, scripts, config trees, and initialization assets
-- only the minimal placeholders that still cannot be resolved without user secrets or environment-specific values
-- detected conflicts and how they were resolved
-- the list of files that will be created in execution phase, including generated Quadlet files, any env file or env delta, and helper scripts such as `install.sh`, `uninstall.sh`, `reload.sh`, `start.sh`, `stop.sh`, and `restart.sh` when applicable; do not introduce a parallel `apply.sh` name unless the user explicitly asks for it
-
-Do not start execution until the user has reviewed and confirmed `QUADLET-FINALIZE.md` or provided requested edits.
-
-Do not use `QUADLET-FINALIZE.md` as the first place where the user sees important choices. Those choices should already have been raised in planning.
+Do not use finalize review as the first place where the user sees important choices. Those choices should already have been raised in planning.
 
 ### Execution phase
 
@@ -231,7 +215,7 @@ Tasks in this phase:
 6. Generate deployment notes or validation guidance only when they materially help the user operate the result.
 7. Generate a README only when the user explicitly wants a self-contained handoff artifact or a packaged deliverable.
 
-Execution should follow the approved contents of `QUADLET-FINALIZE.md`. If the implementation reveals a material conflict with the finalized design, stop and return to planning rather than silently diverging.
+Execution should follow the approved finalize snapshot. If the implementation reveals a material conflict with the finalized design, stop and return to planning rather than silently diverging.
 
 Before calling the result runnable, pass this gate:
 
@@ -249,6 +233,7 @@ Use this execution checklist template:
 - [ ] support files, scripts, and config trees map to the correct host-side destination paths
 - [ ] runnable-output gate passed before describing the result as runnable
 - [ ] helper scripts operate on the same reviewed artifact set that finalize approved
+- [ ] chosen output directory still matches the approved plan and no new file conflicts appeared before writing
 
 
 If you generate a README or operational notes, use the same language as the user unless the user explicitly asks for another language.
@@ -274,6 +259,8 @@ Stop and ask the user before finalizing or generating runnable output when any o
 - image strategy versus local build strategy is materially ambiguous
 - a lossy mapping would change runtime behavior in a way that matters
 - the requested deployment mode conflicts with the intended output location or operator model
+- the user requested a non-default output directory but the resulting deliverable layout or operator model is still ambiguous
+- files that would be written already exist in the chosen output directory and the overwrite/update strategy is not yet approved
 - required repo-local support files or directories referenced by mounts, docs, commands, or scripts have not been identified confidently
 - required runtime files are known but are still missing from the planned deliverable set
 - required env values for minimal service startup are still missing from the final env sources
@@ -286,6 +273,7 @@ Do not keep moving forward by guessing through these gaps.
 Decide early whether the deployment is rootless or rootful, because this changes the apply target path and some operational guidance.
 
 - By default, generate reviewable artifacts in the current working directory first.
+- If the user explicitly requests another output directory for the reviewable artifact set, use that directory instead of forcing the current working directory.
 - For rootless deployments, the default apply target directory is `~/.config/containers/systemd/` unless the user has a reason to use another supported path.
 - For rootful deployments, the default apply target directory is `/etc/containers/systemd/` unless the user asks for a different placement.
 - For rootless long-running services, remind the user about lingering if relevant. See `references/deployment-notes.md`.
@@ -312,7 +300,9 @@ This skill is not a blind converter. For runnable output, collaborate tightly wi
 - Read the docs, comments, and example values yourself, then present the user with a reduced set of concrete decisions and a candidate env result.
 - Ask the user to choose optional services and pod grouping early when the source project offers many containers or feature profiles.
 - Ask the user which volume mode they want before finalizing storage mappings.
-- Ask these questions before writing `QUADLET-FINALIZE.md`, not inside it.
+- Ask whether to opt into `AutoUpdate=registry` before finalize only when the approved image strategy actually supports it.
+- Do not ask a first-time "which output directory?" question when the default current working directory is acceptable; say the default plainly and only ask when the user already asked for a different location or an existing-file conflict requires a choice.
+- Resolve these questions before finalize review, not during execution.
 - Preserve placeholders when the user has not provided final values yet.
 - Distinguish between upstream example values and user-confirmed production values.
 
@@ -340,7 +330,7 @@ At minimum, mention the need to:
 ## Anti-examples
 
 - do not dump a large `.env.example` back to the user as the primary review artifact
-- do not introduce first-time critical decisions inside `QUADLET-FINALIZE.md`
+- do not introduce first-time critical decisions only during finalize review
 - do not force pod topology when a standalone `.container` is the simpler correct result
 - do not keep generating through unresolved deployment-critical unknowns
 

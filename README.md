@@ -8,13 +8,15 @@ A skill for migrating `docker run` commands and Docker Compose-style deployments
 
 - translates `docker run` and Compose-style inputs into Quadlet-oriented designs
 - writes generated artifacts to the current directory by default so they can be reviewed before being applied
+- asks about the output location only when the user requested another location or an existing-file conflict requires a decision
 - helps decide between `.container`, `.pod`, `.network`, `.volume`, and `.build`, with a pod-first bias for multi-container services
 - preserves `.env` / `env_file` workflows when appropriate
 - reduces large env templates into a small set of high-impact deployment questions
 - can generate helper scripts with `install.sh` as the canonical apply step, plus `uninstall.sh`, `reload.sh`, `start.sh`, `stop.sh`, and `restart.sh`
 - identifies required repo-local support files such as mounted config, init assets, and helper scripts that must ship with the result
 - validates env completeness before claiming runnable output
-- encourages explicit finalize and execution checklists for support files and env completeness
+- encourages explicit planning questions plus finalize and execution checklists for support files and env completeness
+- supports opt-in `AutoUpdate=registry` planning when the approved image strategy uses fully qualified registry images
 - explains rootless vs rootful apply targets, deployment notes, and validation steps
 
 ## Design principles
@@ -31,8 +33,20 @@ A skill for migrating `docker run` commands and Docker Compose-style deployments
 ## Operating modes
 
 - `advice`: explain mappings or review source inputs without writing final artifacts
-- `design`: perform planning and finalize review, then stop before runnable artifact generation
-- `generate`: produce approved runnable artifacts after planning and finalize review
+- `design`: perform planning and interactive finalize review, then stop before runnable artifact generation
+- `generate`: produce approved runnable artifacts after planning, interactive finalize review, and execution
+
+## Workflow
+
+The full workflow has three explicit phases: `Planning`, `Finalize`, and `Execution`.
+
+- `advice` usually stays in `Planning` or gives a targeted answer without entering all phases
+- `design` uses `Planning` and `Finalize`
+- `generate` uses all three phases
+
+Planning must ask the user to confirm unresolved high-impact decisions before moving forward.
+Finalize happens as an interactive review in conversation after those planning questions have already been discussed.
+Execution starts only after the user has reviewed and confirmed the finalize review or requested edits.
 
 ## References
 
