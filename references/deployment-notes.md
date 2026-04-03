@@ -8,6 +8,7 @@ Use this file when the user wants deployment-ready instructions alongside genera
 2. Review the generated Quadlet files, env files, helper scripts, and any required repo-local support files or directories.
 3. Use `install.sh` to copy only the reviewed unit files into the chosen Quadlet directory. Copy env files and any other required runtime support files into the correct host-side paths the deployment expects.
 4. Use `reload.sh`, `start.sh`, `stop.sh`, and `restart.sh` to manage the deployed services.
+5. Use `uninstall.sh` when the user wants to remove the installed reviewed artifact set without broad Podman cleanup.
 
 ## Apply target directory
 
@@ -27,14 +28,18 @@ See `podman-systemd.unit.5.md` for the full search-path matrix.
 
 - `install.sh`: canonical apply script; copy only reviewed Quadlet unit files into the selected Quadlet target directory, and copy env files plus any other required runtime support files into the correct host-side paths
 - do not generate a separate `apply.sh` by default; reserve that alternate name only when the user explicitly asks for it
+- `uninstall.sh`: remove the installed reviewed artifact set from the selected Quadlet target directory and corresponding host-side runtime support-file paths, stopping affected services first when needed
 - `reload.sh`: run the appropriate `daemon-reload` command after installation changes
-- `start.sh`: start the generated units
-- `stop.sh`: stop the generated units
-- `restart.sh`: restart the generated units after reload or config changes
+- `start.sh`: start the generated units; when the topology uses a `.pod`, start the pod's systemd service derived from `ServiceName=` when present on the `.pod`, otherwise use Quadlet's default generated pod service name, instead of also starting each child container service individually
+- `stop.sh`: stop the generated units; when the topology uses a `.pod`, stop the pod's systemd service derived from `ServiceName=` when present on the `.pod`, otherwise use Quadlet's default generated pod service name, instead of duplicating per-container stop commands for its child containers
+- `restart.sh`: restart the generated units after reload or config changes; when the topology uses a `.pod`, restart the pod's systemd service derived from `ServiceName=` when present on the `.pod`, otherwise use Quadlet's default generated pod service name, instead of also restarting each child container service individually
 
 Keep installation separate from service-management scripts so the user can review generated files before applying them.
 `install.sh` should copy reviewed Quadlet unit files into the chosen Quadlet target directory and place required runtime support files into their correct host-side destinations only, and should not start, stop, restart, or reload services as a side effect.
+`uninstall.sh` should remove only the installed reviewed artifact set, stop affected services before removal when needed, and leave unrelated files, shared directories, named volumes, images, and Podman objects alone unless the user explicitly asks for broader cleanup.
 `reload.sh`, `start.sh`, `stop.sh`, and `restart.sh` should not silently install or overwrite reviewed files.
+Do not use `ServiceName=` as an application connection target. It controls the generated systemd unit name only. When services communicate over a shared network outside a single pod namespace, prefer container names, pod names, or explicit `NetworkAlias=` values.
+Within a single pod, use `127.0.0.1` / `localhost` for container-to-container communication instead of generating `AddHost=` entries whose purpose is sibling-container discovery.
 
 ## Review checklist before install
 

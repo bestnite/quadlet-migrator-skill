@@ -58,8 +58,12 @@ Use this file when converting `docker-compose.yml` or `compose.yaml` into Quadle
 - If the source uses bridge networking for containers that can reasonably live in one pod, collapse that topology into one `.pod` so the containers share one network namespace.
 - Create a `.network` unit only when services must be split across pods, or when explicit network isolation or custom network management is materially required.
 - Containers in the same `.pod` can communicate over `127.0.0.1` / `localhost` because they share a network namespace.
+- When `Pod=` is set, never generate `AddHost=` entries whose purpose is sibling-container discovery inside that pod; intra-pod communication should use `127.0.0.1` / `localhost` instead.
+- `AddHost=` is a host-to-IP override, not an intra-pod service-discovery mechanism. Upstream Quadlet documents `AddHost=` in both `[Container]` and `[Pod]`, so do not describe `Pod=` as a blanket prohibition on `AddHost=` unless the upstream reference explicitly requires that for the case at hand.
 - Containers in different pods must not be treated as reachable via `127.0.0.1` / `localhost`.
-- When splitting services across multiple pods, use container names, pod names, or service-level addressing across the shared network, or publish ports to the host boundary when that is the intended access pattern.
+- When splitting services across multiple pods or preserving a shared bridge network, use container names, pod names, or explicit `NetworkAlias=` values on the shared network, or publish ports to the host boundary when that is the intended access pattern.
+- `ServiceName=` controls the generated systemd unit name only and must not be used as an application-facing network address.
+- `PodName=` controls the Podman pod name only; it can participate in the chosen addressing strategy, but it does not determine the systemd service name.
 
 ### `environment`
 
@@ -174,7 +178,7 @@ If the project is a simple single-container deployment with no real need for pod
 
 If one pod is not practical because of port conflicts or clearly incompatible groupings, split the result into a small number of pods rather than forcing an awkward topology.
 
-When services are split across multiple pods, do not rely on `127.0.0.1` / `localhost` for cross-pod communication. Use container names, pod names, or other service-level addressing on the shared network instead.
+When services are split across multiple pods, do not rely on `127.0.0.1` / `localhost` for cross-pod communication. Use container names, pod names, or explicit `NetworkAlias=` values on the shared network instead.
 
 Avoid preserving bridge networks by default when pod grouping already expresses the intended communication pattern well.
 

@@ -11,7 +11,7 @@
 - 帮助在 `.container`、`.pod`、`.network`、`.volume`、`.build` 之间做选择，并对多容器服务默认偏向 pod-first 拓扑
 - 在合适时保留 `.env` / `env_file` 工作流
 - 将大型 env 模板归纳为少量高影响部署问题
-- 可生成辅助脚本，其中 `install.sh` 是规范的 apply 步骤，另可生成 `reload.sh`、`start.sh`、`stop.sh`、`restart.sh`
+- 可生成辅助脚本，其中 `install.sh` 是规范的 apply 步骤，另可生成 `uninstall.sh`、`reload.sh`、`start.sh`、`stop.sh`、`restart.sh`
 - 会识别并交付运行所需的 repo 内配套文件，例如挂载配置、初始化资源和辅助脚本
 - 在声称结果可运行前，会检查环境变量完整性，而不是只做 env 摘要
 - 鼓励在 finalize 与 execution 阶段显式使用 support files 与 env completeness 检查清单

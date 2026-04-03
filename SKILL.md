@@ -18,7 +18,7 @@ This skill helps you:
 - choose between `.container`, `.pod`, `.network`, `.volume`, and `.build`, with a pod-first bias for multi-container services
 - decide whether values belong in `Environment=` or `EnvironmentFile=`
 - write reviewable output to the current directory by default before the user applies it to a live Quadlet search path
-- generate helper scripts with `install.sh` as the canonical apply script name, plus `reload.sh`, `start.sh`, `stop.sh`, and `restart.sh` when producing runnable artifacts
+- generate helper scripts with `install.sh` as the canonical apply script name, plus `uninstall.sh`, `reload.sh`, `start.sh`, `stop.sh`, and `restart.sh` when producing runnable artifacts
 - identify required repo-local companion files such as config files, templates, seed data, or initialization assets that must be shipped alongside Quadlet output for the deployment to run correctly
 - validate env completeness before claiming runnable output, including missing required keys and suspicious env-key mismatches
 - work closely with the user to confirm deployment-specific environment values and operational choices
@@ -126,7 +126,12 @@ Tasks in this phase:
    - if one logical service contains multiple containers, prefer keeping them in the same `.pod` so they share one network namespace
    - even when the source Compose topology uses bridge networking, prefer pod-based grouping over preserving bridge semantics mechanically
    - containers in the same `.pod` can communicate over `127.0.0.1` / `localhost` because they share a network namespace
-   - containers in different pods must not be treated as reachable via `127.0.0.1` / `localhost`; if you split the topology across multiple pods, use container naming, pod naming, or service-level addressing instead
+   - when `Pod=` is set, never generate `AddHost=` entries whose purpose is sibling-container discovery inside that pod; intra-pod communication must use `127.0.0.1` / `localhost` instead
+   - `AddHost=` remains a host-to-IP override, not an intra-pod service-discovery mechanism; because upstream Quadlet supports `AddHost=` in both `[Container]` and `[Pod]`, do not claim that `Pod=` categorically forbids `AddHost=` unless the upstream reference says so for the specific case
+   - when containers are attached with `Pod=<name>.pod`, treat the pod's generated systemd service as the primary lifecycle unit; derive that service name from `ServiceName=` when present on the `.pod`, otherwise use Quadlet's default generated pod service name. Starting that pod service brings up the pod-managed containers, so do not add redundant per-container start commands for those child units in helper scripts
+   - containers in different pods must not be treated as reachable via `127.0.0.1` / `localhost`; if you split the topology across multiple pods or preserve a shared bridge network, use container names, pod names, or explicit `NetworkAlias=` values on the shared network instead
+   - `ServiceName=` controls the generated systemd unit name only and must not be treated as an application-facing network address
+   - `PodName=` controls the Podman pod name only and may be part of the chosen addressing strategy, but it does not determine the systemd service name
    - if one pod is not practical because of port conflicts or clearly incompatible groupings, split the result into a small number of pods rather than forcing an awkward topology
    - avoid `.network` / bridge-first designs unless pod topology cannot express the intended deployment cleanly
 
@@ -194,7 +199,7 @@ When the design has materially changed, replace outdated sections so the file re
 - the intended host-side destination paths for required support files, scripts, config trees, and initialization assets
 - only the minimal placeholders that still cannot be resolved without user secrets or environment-specific values
 - detected conflicts and how they were resolved
-- the list of files that will be created in execution phase, including generated Quadlet files, any env file or env delta, and helper scripts such as `install.sh`, `reload.sh`, `start.sh`, `stop.sh`, and `restart.sh` when applicable; do not introduce a parallel `apply.sh` name unless the user explicitly asks for it
+- the list of files that will be created in execution phase, including generated Quadlet files, any env file or env delta, and helper scripts such as `install.sh`, `uninstall.sh`, `reload.sh`, `start.sh`, `stop.sh`, and `restart.sh` when applicable; do not introduce a parallel `apply.sh` name unless the user explicitly asks for it
 
 Do not start execution until the user has reviewed and confirmed `QUADLET-FINALIZE.md` or provided requested edits.
 
@@ -208,12 +213,15 @@ Tasks in this phase:
 
 1. Generate the Quadlet files in the current working directory by default so the user can review them before applying them.
 2. Generate the env file or env delta only when needed for runnable output.
-3. Generate helper scripts such as `install.sh`, `reload.sh`, `start.sh`, `stop.sh`, and `restart.sh` when they materially help the user apply and operate the result.
+3. Generate helper scripts such as `install.sh`, `uninstall.sh`, `reload.sh`, `start.sh`, `stop.sh`, and `restart.sh` when they materially help the user apply and operate the result.
    - Use `install.sh` as the default and canonical script name for applying the reviewed artifact set.
    - Do not also generate `apply.sh` unless the user explicitly asks for that alternate name.
    - `install.sh` should copy only Quadlet unit files into the chosen Quadlet target directory. It should copy env files, mounted config, scripts, and other required runtime support files into the correct host-side paths the deployment actually expects.
    - `install.sh` should not start, stop, restart, or reload services as a side effect.
+   - `uninstall.sh` should remove only the previously installed reviewed artifact set from the chosen Quadlet target directory and the corresponding host-side runtime support-file paths.
+   - `uninstall.sh` should stop affected services before removing their installed units or runtime support files, and should not delete unrelated files, shared directories, named volumes, images, or Podman objects unless the user explicitly asks for that broader cleanup.
    - `reload.sh`, `start.sh`, `stop.sh`, and `restart.sh` should manage services only and should not silently install or overwrite files.
+   - when a generated topology includes `<name>.pod` plus child containers linked with `Pod=<name>.pod`, make the pod service the lifecycle entrypoint in helper scripts; derive that service name from `ServiceName=` when present on the `.pod`, otherwise use Quadlet's default generated pod service name. Do not emit redundant `systemctl start/stop/restart` lines for each child container that is already managed through the pod service.
 4. If the deployment depends on repo-local support files or directories, generate or copy those reviewed artifacts into the current-directory deliverable set as well.
 5. Do not claim runnable output until the final env sources and support-file set are complete enough for minimal startup.
 6. Generate deployment notes or validation guidance only when they materially help the user operate the result.
@@ -227,7 +235,7 @@ Before calling the result runnable, pass this gate:
 - every referenced `EnvironmentFile=` exists in the deliverable set and contains the required keys
 - startup-critical env values are either present or explicitly unresolved
 - suspected env typos have been resolved or surfaced to the user
-- install, reload, and service-management scripts match the approved artifact set
+- install, uninstall, reload, and service-management scripts match the approved artifact set
 
 Use this execution checklist template:
 
@@ -323,7 +331,7 @@ At minimum, mention the need to:
 - `docker run` for a single web service -> often `advice` or `generate` with one `.container`
 - small Compose app with api and db -> usually `design` or `generate`, often one `.pod` plus child containers
 - GitHub repo with `.env.example` and multiple profiles -> start in `Planning`, reduce the env questions, then move to `Finalize`
-- review-first runnable output -> `generate` often writes Quadlet files plus `install.sh`, `reload.sh`, `start.sh`, `stop.sh`, and `restart.sh` into the current directory, with `install.sh` as the canonical apply step
+- review-first runnable output -> `generate` often writes Quadlet files plus `install.sh`, `uninstall.sh`, `reload.sh`, `start.sh`, `stop.sh`, and `restart.sh` into the current directory, with `install.sh` as the canonical apply step
 
 ## Anti-examples
 

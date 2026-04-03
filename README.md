@@ -11,7 +11,7 @@ A skill for migrating `docker run` commands and Docker Compose-style deployments
 - helps decide between `.container`, `.pod`, `.network`, `.volume`, and `.build`, with a pod-first bias for multi-container services
 - preserves `.env` / `env_file` workflows when appropriate
 - reduces large env templates into a small set of high-impact deployment questions
-- can generate helper scripts with `install.sh` as the canonical apply step, plus `reload.sh`, `start.sh`, `stop.sh`, and `restart.sh`
+- can generate helper scripts with `install.sh` as the canonical apply step, plus `uninstall.sh`, `reload.sh`, `start.sh`, `stop.sh`, and `restart.sh`
 - identifies required repo-local support files such as mounted config, init assets, and helper scripts that must ship with the result
 - validates env completeness before claiming runnable output
 - encourages explicit finalize and execution checklists for support files and env completeness

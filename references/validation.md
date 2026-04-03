@@ -8,6 +8,7 @@ Use this file when the user asks how to verify or troubleshoot generated Quadlet
 2. Run `install.sh` to copy only the reviewed unit files into the target Quadlet directory and place required runtime support files into the correct host-side paths.
 3. Run the appropriate reload command.
 4. Start the relevant units and inspect their status.
+5. If needed, run `uninstall.sh` to remove the installed reviewed artifact set before regenerating or abandoning the deployment.
 
 If the user requested an alternate apply script name explicitly, substitute that name where needed, but treat `install.sh` as the default documentation path.
 
