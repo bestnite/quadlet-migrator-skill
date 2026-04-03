@@ -1,11 +1,11 @@
 ---
 name: quadlet-migrator
-description: Convert docker run commands or Docker Compose configurations into maintainable Podman Quadlet files, help users map env/env_file/.env usage into Environment or EnvironmentFile, and explain rootless or rootful deployment details and migration risks.
+description: Convert docker run commands or Docker Compose configurations into maintainable Podman Quadlet files, default to writing reviewable output in the current directory, generate helper install/reload/start/stop/restart scripts, carry along required repo-local companion files such as config templates or init assets, help users map env/env_file/.env usage into Environment or EnvironmentFile, and explain rootless or rootful deployment details and migration risks.
 ---
 
 # Quadlet Migrator
 
-Use this skill when the user wants to migrate `docker run`, `docker compose`, or Compose-like service definitions into Podman Quadlet units, especially when environment variables, `env_file`, `.env`, rootless deployment, or systemd layout need to be planned or generated.
+Use this skill when the user wants to migrate `docker run`, `docker compose`, or Compose-like service definitions into Podman Quadlet units, especially when environment variables, `env_file`, `.env`, rootless deployment, systemd layout, review-first generation into the current directory, or helper management scripts need to be planned or generated.
 
 Do not rely on `podlet` as an execution dependency. You may use it only as prior-art knowledge, not as part of the runtime workflow.
 
@@ -15,8 +15,12 @@ This skill helps you:
 
 - discover Docker deployment entry points from a GitHub repository URL
 - translate `docker run` flags and Compose service fields into Quadlet units
-- choose between `.container`, `.pod`, `.network`, `.volume`, and `.build`
+- choose between `.container`, `.pod`, `.network`, `.volume`, and `.build`, with a pod-first bias for multi-container services
 - decide whether values belong in `Environment=` or `EnvironmentFile=`
+- write reviewable output to the current directory by default before the user applies it to a live Quadlet search path
+- generate helper scripts with `install.sh` as the canonical apply script name, plus `reload.sh`, `start.sh`, `stop.sh`, and `restart.sh` when producing runnable artifacts
+- identify required repo-local companion files such as config files, templates, seed data, or initialization assets that must be shipped alongside Quadlet output for the deployment to run correctly
+- validate env completeness before claiming runnable output, including missing required keys and suspicious env-key mismatches
 - work closely with the user to confirm deployment-specific environment values and operational choices
 - identify missing variables, unsafe inline secrets, and unsupported Compose semantics
 - produce deployment notes for rootless or rootful systemd setups
@@ -61,6 +65,7 @@ Tasks in this phase:
    - inspect common deployment-oriented subdirectories such as `docker/`, `deploy/`, `ops/`, `infra/`, `.devcontainer/`, and `examples/`, but do not assume the right entry point must live there
    - look for `.env.example`, `.env.sample`, `env.example`, `middleware.env.example`, or similar templates
    - inspect whether the project uses Compose profiles, multiple compose files, generated compose files, or helper scripts
+   - identify repo-local companion files referenced by bind mounts, docs, `entrypoint`, `command`, or wrapper scripts, and decide whether they belong in the deliverable set
    - identify the canonical self-hosting entry point rather than assuming the repo root file is authoritative
 
 3. Build a semantic model before writing Quadlet.
@@ -73,6 +78,8 @@ Tasks in this phase:
    - restart policy
    - health checks
    - startup dependencies
+   - repo-local companion files required at runtime, such as config files, templates, migrations, seed data, or initialization assets
+   - repo-local entrypoint scripts, helper scripts, and bind-mounted directories that must remain part of the deliverable set
 
 4. Identify which values and decisions must be confirmed with the user.
    - external URLs, domains, and ports
@@ -85,6 +92,9 @@ Tasks in this phase:
    - whether secrets should stay in env files or be moved elsewhere
 
 Do not silently invent deployment-specific values. If the repository or compose file provides placeholders, defaults, or examples, read the surrounding documentation and comments yourself, infer the intended meaning, and only ask the user to confirm the values that materially affect deployment.
+
+If Compose files, bind mounts, startup docs, entrypoints, or helper scripts reference repo-local files or whole directories, treat those assets as candidates for the final deliverable set rather than incidental source files.
+Do not assume runnable output is complete when Quadlet files exist but required mounted config, init assets, or startup scripts have not been identified.
 
 When many variables exist, do not hand the raw `.env.example` back to the user for manual review. Your job is to digest it, reduce it, and produce a concise checklist of high-impact decisions. Prioritize the variables that are required to produce a safe and runnable output.
 
@@ -112,11 +122,13 @@ Tasks in this phase:
 
 1. Freeze the chosen service set and runtime grouping.
    - prefer putting the whole project in a single pod when practical
-   - if the project is a simple single-container deployment, a standalone `.container` is acceptable
-   - if shared networking, shared published ports, or tighter lifecycle coupling make pod semantics useful, prefer one or more `.pod` units
+   - if the project is a simple single-container deployment, a standalone `.container` is the default
+   - if one logical service contains multiple containers, prefer keeping them in the same `.pod` so they share one network namespace
+   - even when the source Compose topology uses bridge networking, prefer pod-based grouping over preserving bridge semantics mechanically
    - containers in the same `.pod` can communicate over `127.0.0.1` / `localhost` because they share a network namespace
-   - containers in different pods must not be treated as reachable via `127.0.0.1` / `localhost`; if you split the topology across multiple pods, use container networking and service addressing, or publish ports across the host boundary when that better matches the deployment
+   - containers in different pods must not be treated as reachable via `127.0.0.1` / `localhost`; if you split the topology across multiple pods, use container naming, pod naming, or service-level addressing instead
    - if one pod is not practical because of port conflicts or clearly incompatible groupings, split the result into a small number of pods rather than forcing an awkward topology
+   - avoid `.network` / bridge-first designs unless pod topology cannot express the intended deployment cleanly
 
 2. Freeze the storage strategy.
    - named volume, bind mount, or anonymous volume per storage use case
@@ -136,15 +148,29 @@ Tasks in this phase:
    - use `EnvironmentFile=` for bulk variables, secrets, or values already sourced from `.env` / `env_file`
    - if Compose interpolation references variables that are missing, report them explicitly and prepare a candidate env file with placeholders or suggested defaults instead of delegating the entire review back to the user
    - treat variable names containing `PASSWORD`, `TOKEN`, `SECRET`, `KEY`, `PRIVATE`, or `PASS` as sensitive by default and avoid inlining unless the user explicitly wants that
+   - do not treat a variable as satisfied unless it is present in an actual final source such as `Environment=`, the final `EnvironmentFile=`, or an explicitly preserved default
+   - if a likely required startup variable is still absent from the final output, keep it unresolved instead of downgrading it to an informational note
+   - if referenced env keys and final env keys contain likely near-match typos, call them out explicitly before execution
 
 5. Summarize already-known conflicts and their chosen resolution.
    - port collisions
    - incompatible grouping decisions
    - storage mode inconsistencies
    - unresolved required variables
+   - suspicious env-key mismatches or typo candidates
+   - missing required repo-local support files or directories
    - mismatch between requested deployment mode and selected file locations
 
 At the end of finalize, write `QUADLET-FINALIZE.md` and ask the user to review it before you start writing the final artifacts.
+
+Before finalizing, use this checklist template:
+
+- [ ] support-file set identified, including mounted config, entrypoint scripts, init assets, and bind-mounted directories
+- [ ] support files classified as upstream-preserved, locally generated, or locally rewritten
+- [ ] env keys classified into satisfied, unresolved, default-derived, and typo-suspect states
+- [ ] finalized file list reflects everything the runtime needs, not just Quadlet units
+- [ ] any remaining placeholders are explicit and understood as non-runnable until filled
+
 
 `QUADLET-FINALIZE.md` is a review artifact, not a questionnaire. It should summarize decisions that were already discussed in planning.
 
@@ -161,9 +187,14 @@ When the design has materially changed, replace outdated sections so the file re
 - image strategy
 - volume strategy
 - env strategy
+- env completeness status, including unresolved required variables and suspicious typo candidates
+- repo-local support files and directories that must be copied, preserved, or rendered for the deployment to run
+- which support files come from upstream unchanged versus which are generated or rewritten locally
+- the intended apply target directory for rootless or rootful deployment
+- the intended host-side destination paths for required support files, scripts, config trees, and initialization assets
 - only the minimal placeholders that still cannot be resolved without user secrets or environment-specific values
 - detected conflicts and how they were resolved
-- the list of files that will be created in execution phase
+- the list of files that will be created in execution phase, including generated Quadlet files, any env file or env delta, and helper scripts such as `install.sh`, `reload.sh`, `start.sh`, `stop.sh`, and `restart.sh` when applicable; do not introduce a parallel `apply.sh` name unless the user explicitly asks for it
 
 Do not start execution until the user has reviewed and confirmed `QUADLET-FINALIZE.md` or provided requested edits.
 
@@ -175,12 +206,38 @@ Goal: write the approved runnable artifacts.
 
 Tasks in this phase:
 
-1. Generate the Quadlet files.
+1. Generate the Quadlet files in the current working directory by default so the user can review them before applying them.
 2. Generate the env file or env delta only when needed for runnable output.
-3. Generate deployment notes or validation guidance only when they materially help the user operate the result.
-4. Generate a README only when the user explicitly wants a self-contained handoff artifact or a packaged deliverable.
+3. Generate helper scripts such as `install.sh`, `reload.sh`, `start.sh`, `stop.sh`, and `restart.sh` when they materially help the user apply and operate the result.
+   - Use `install.sh` as the default and canonical script name for applying the reviewed artifact set.
+   - Do not also generate `apply.sh` unless the user explicitly asks for that alternate name.
+   - `install.sh` should copy only Quadlet unit files into the chosen Quadlet target directory. It should copy env files, mounted config, scripts, and other required runtime support files into the correct host-side paths the deployment actually expects.
+   - `install.sh` should not start, stop, restart, or reload services as a side effect.
+   - `reload.sh`, `start.sh`, `stop.sh`, and `restart.sh` should manage services only and should not silently install or overwrite files.
+4. If the deployment depends on repo-local support files or directories, generate or copy those reviewed artifacts into the current-directory deliverable set as well.
+5. Do not claim runnable output until the final env sources and support-file set are complete enough for minimal startup.
+6. Generate deployment notes or validation guidance only when they materially help the user operate the result.
+7. Generate a README only when the user explicitly wants a self-contained handoff artifact or a packaged deliverable.
 
 Execution should follow the approved contents of `QUADLET-FINALIZE.md`. If the implementation reveals a material conflict with the finalized design, stop and return to planning rather than silently diverging.
+
+Before calling the result runnable, pass this gate:
+
+- the generated artifact set includes all required support files and directories
+- every referenced `EnvironmentFile=` exists in the deliverable set and contains the required keys
+- startup-critical env values are either present or explicitly unresolved
+- suspected env typos have been resolved or surfaced to the user
+- install, reload, and service-management scripts match the approved artifact set
+
+Use this execution checklist template:
+
+- [ ] support-file set copied, generated, or preserved in the deliverable tree
+- [ ] every `EnvironmentFile=` path resolves to an actual reviewed file
+- [ ] startup-critical env keys present, or explicitly marked as unresolved placeholders
+- [ ] support files, scripts, and config trees map to the correct host-side destination paths
+- [ ] runnable-output gate passed before describing the result as runnable
+- [ ] helper scripts operate on the same reviewed artifact set that finalize approved
+
 
 If you generate a README or operational notes, use the same language as the user unless the user explicitly asks for another language.
 
@@ -205,15 +262,20 @@ Stop and ask the user before finalizing or generating runnable output when any o
 - image strategy versus local build strategy is materially ambiguous
 - a lossy mapping would change runtime behavior in a way that matters
 - the requested deployment mode conflicts with the intended output location or operator model
+- required repo-local support files or directories referenced by mounts, docs, commands, or scripts have not been identified confidently
+- required runtime files are known but are still missing from the planned deliverable set
+- required env values for minimal service startup are still missing from the final env sources
+- likely env-key typos or mismatches remain unresolved
 
 Do not keep moving forward by guessing through these gaps.
 
 ## Rootless vs rootful
 
-Decide early whether the deployment is rootless or rootful, because this changes the output path and some operational guidance.
+Decide early whether the deployment is rootless or rootful, because this changes the apply target path and some operational guidance.
 
-- For rootless deployments, use `~/.config/containers/systemd/` unless the user has a reason to use another supported path.
-- For rootful deployments, use `/etc/containers/systemd/` unless the user asks for a different placement.
+- By default, generate reviewable artifacts in the current working directory first.
+- For rootless deployments, the default apply target directory is `~/.config/containers/systemd/` unless the user has a reason to use another supported path.
+- For rootful deployments, the default apply target directory is `/etc/containers/systemd/` unless the user asks for a different placement.
 - For rootless long-running services, remind the user about lingering if relevant. See `references/deployment-notes.md`.
 
 When you need authoritative details about supported search paths, unit semantics, option names, or debugging, read `references/podman-systemd.unit.5.md`.
@@ -250,7 +312,8 @@ When the user wants runnable output, provide the relevant deployment notes from 
 
 At minimum, mention the need to:
 
-- place files in a valid Quadlet directory
+- review the generated files in the current directory
+- apply the reviewed files into the correct Quadlet directory and host-side runtime paths
 - run `systemctl daemon-reload` or `systemctl --user daemon-reload`
 - create required bind-mount directories before first start
 - verify generator output or systemd unit validity when startup fails
@@ -260,6 +323,7 @@ At minimum, mention the need to:
 - `docker run` for a single web service -> often `advice` or `generate` with one `.container`
 - small Compose app with api and db -> usually `design` or `generate`, often one `.pod` plus child containers
 - GitHub repo with `.env.example` and multiple profiles -> start in `Planning`, reduce the env questions, then move to `Finalize`
+- review-first runnable output -> `generate` often writes Quadlet files plus `install.sh`, `reload.sh`, `start.sh`, `stop.sh`, and `restart.sh` into the current directory, with `install.sh` as the canonical apply step
 
 ## Anti-examples
 

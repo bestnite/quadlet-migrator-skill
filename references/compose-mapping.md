@@ -48,14 +48,18 @@ Use this file when converting `docker-compose.yml` or `compose.yaml` into Quadle
 - Normalize relative host paths against the Compose file directory and emit absolute paths in the final Quadlet output.
 - Named volumes can remain referenced by name, but when the user wants explicit infrastructure-as-code, create matching `.volume` units.
 - Ask the user which volume mode they want when the source does not make the intended persistence model obvious.
+- If a bind mount points to a repo-local file or directory, include that source in the reviewable deliverable set unless the user explicitly wants a host-managed external path instead.
+- If a bind mount references a whole directory, inspect and preserve the required directory contents rather than only naming the directory root.
 
 ### `networks`
 
-- If the source uses a default network only, you often do not need a `.network` unit.
-- If a custom network is intentional and needs to be managed declaratively, create a `.network` unit and reference it explicitly.
+- Prefer pod-first topology over preserving Compose bridge networks mechanically.
+- If the source uses a default network only, you often do not need a `.network` unit at all.
+- If the source uses bridge networking for containers that can reasonably live in one pod, collapse that topology into one `.pod` so the containers share one network namespace.
+- Create a `.network` unit only when services must be split across pods, or when explicit network isolation or custom network management is materially required.
 - Containers in the same `.pod` can communicate over `127.0.0.1` / `localhost` because they share a network namespace.
 - Containers in different pods must not be treated as reachable via `127.0.0.1` / `localhost`.
-- When splitting services across multiple pods, use container networking and service-level addressing, or publish ports to the host boundary when that is the intended access pattern.
+- When splitting services across multiple pods, use container names, pod names, or service-level addressing across the shared network, or publish ports to the host boundary when that is the intended access pattern.
 
 ### `environment`
 
@@ -84,11 +88,6 @@ Use this file when converting `docker-compose.yml` or `compose.yaml` into Quadle
 - Translate to `Requires=` and `After=` when that reflects intent.
 - State clearly that this controls startup ordering, not application readiness.
 
-### `restart`
-
-- Map common cases to `[Service] Restart=`.
-- If the source policy has no direct systemd equivalent, choose the nearest safe mapping and explain it.
-
 ### `healthcheck`
 
 - Prefer dedicated Quadlet health fields such as `HealthCmd=`, `HealthInterval=`, `HealthTimeout=`, `HealthRetries=` when representable.
@@ -98,6 +97,7 @@ Use this file when converting `docker-compose.yml` or `compose.yaml` into Quadle
 
 - `entrypoint` typically maps to `Entrypoint=`.
 - `command` typically maps to `Exec=`.
+- If an entrypoint or helper script is repo-local, treat it as a support file that must be copied or preserved in the generated layout.
 
 ### `user`
 
@@ -136,7 +136,7 @@ Image=docker.io/library/nginx:latest
 PublishPort=8080:80
 ```
 
-Use this when the deployment is truly a simple single-service case and pod semantics add little value.
+Use this when the deployment is truly a simple single-service case. A single container should usually stay a standalone `.container` rather than being wrapped in a pod.
 
 ### Small multi-service app to one pod
 
@@ -160,7 +160,7 @@ Reasonable result shape:
 - `api` may reach `db` over `127.0.0.1` / `localhost` because both containers share the pod network namespace
 - ordering hints for startup, while explicitly noting that `depends_on` does not guarantee readiness
 
-Use this when shared networking and a grouped lifecycle make the deployment easier to operate.
+Use this as the default shape for a small multi-container service unless port conflicts or incompatible grouping force a split into multiple pods.
 
 ## Pod decision rule
 
@@ -168,10 +168,15 @@ Choose the simplest topology that preserves the source deployment intent.
 
 Prefer a single `.pod` for multi-container applications when practical.
 
-If the project is a simple single-container deployment with no real need for pod semantics, a standalone `.container` is acceptable.
+If one logical service contains multiple containers, default to putting them in the same `.pod` so they share networking and lifecycle.
 
-If shared networking, shared published ports, or tightly coupled service lifecycle make pod semantics useful, prefer one or more `.pod` units.
+If the project is a simple single-container deployment with no real need for pod semantics, a standalone `.container` is the preferred result.
 
 If one pod is not practical because of port conflicts or clearly incompatible groupings, split the result into a small number of pods rather than forcing an awkward topology.
 
+When services are split across multiple pods, do not rely on `127.0.0.1` / `localhost` for cross-pod communication. Use container names, pod names, or other service-level addressing on the shared network instead.
+
+Avoid preserving bridge networks by default when pod grouping already expresses the intended communication pattern well.
+
 For large application stacks with optional services, ask the user to choose the desired service set before generating a minimized result.
+
