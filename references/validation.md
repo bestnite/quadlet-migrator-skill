@@ -68,6 +68,7 @@ Before calling the result runnable, verify that:
 - repo-local entrypoint or helper scripts referenced by the container exist and are executable when needed
 - initialization assets such as `init.sql`, seeds, bootstrap files, or config templates are present where the deployment expects them
 - service-management scripts operate on the same reviewed artifact set that finalize approved
+- helper shell scripts match reviewed Quadlet files by their shared generated prefix with globbing such as `<prefix>*`, not hardcoded filenames or assumed file counts
 
 Runnable-output gate checklist template:
 

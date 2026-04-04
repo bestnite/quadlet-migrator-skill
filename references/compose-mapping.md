@@ -7,6 +7,7 @@ Use this file when converting `docker-compose.yml` or `compose.yaml` into Quadle
 - Model each service first, then decide how to group all resulting containers into one or more `.pod` units.
 - Prefer maintainable Quadlet output over mechanical one-to-one translation.
 - Keep names stable and predictable. Generated filenames should use a shared project prefix.
+- When one deliverable set includes multiple Quadlet files, keep that shared prefix consistent so helper shell scripts can match them by shared-prefix globbing such as `<prefix>*`, instead of hardcoding exact filenames or assuming a fixed file count.
 
 ## Field strategy
 
@@ -187,4 +188,3 @@ When services are split across multiple pods, do not rely on `127.0.0.1` / `loca
 Avoid preserving bridge networks by default when pod grouping already expresses the intended communication pattern well.
 
 For large application stacks with optional services, ask the user to choose the desired service set before generating a minimized result.
-

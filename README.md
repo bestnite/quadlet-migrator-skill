@@ -56,6 +56,7 @@ Execution starts only after the user approves that review.
 - `references/github-repo-intake.md` covers how the skill finds the right repository entry point
 - `references/deployment-notes.md` covers deployment guidance
 - `references/validation.md` covers validation and troubleshooting
+- `references/template/` contains simple helper-script templates for stable prefix-based Quadlet file handling and lifecycle management
 
 ## Limitations
 

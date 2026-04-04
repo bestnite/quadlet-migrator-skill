@@ -35,6 +35,7 @@ See `podman-systemd.unit.5.md` for the full search-path matrix.
 
 - `install.sh`: canonical apply script; copy only reviewed Quadlet unit files into the selected Quadlet target directory
 - do not generate a separate `apply.sh` by default; reserve that alternate name only when the user explicitly asks for it
+- helper shell scripts must discover the reviewed Quadlet files through their shared generated prefix, using shared-prefix glob matching such as `<prefix>*` instead of hardcoding exact filenames or assuming a fixed file count
 - `install.sh` must not start, stop, restart, or reload services as a side effect
 - `uninstall.sh`: remove the installed reviewed Quadlet unit files from the selected Quadlet target directory
 - `uninstall.sh` should stop affected services before removing their installed unit files, and should not delete support files from the current-directory deliverable set, unrelated files, shared directories, named volumes, images, or Podman objects unless the user explicitly asks for broader cleanup

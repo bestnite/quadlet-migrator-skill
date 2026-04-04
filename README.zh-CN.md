@@ -56,6 +56,7 @@ Finalize 是在这些问题讨论清楚之后进行的对话式审阅。
 - `references/github-repo-intake.md`：说明 skill 如何找到正确的仓库入口
 - `references/deployment-notes.md`：部署说明
 - `references/validation.md`：验证与排障
+- `references/template/`：用于稳定处理 Quadlet 文件与 lifecycle 管理的简洁 helper script 模板目录
 
 ## 限制
 

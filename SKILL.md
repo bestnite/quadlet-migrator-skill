@@ -18,7 +18,7 @@ This skill helps you:
 - choose between `.container`, `.pod`, `.network`, `.volume`, and `.build`, with a pod-first bias for multi-container services
 - decide whether values belong in `Environment=` or `EnvironmentFile=`
 - write reviewable output to the current directory by default, unless the user requested another output directory or an existing-file conflict requires a decision before writing
-- generate helper scripts with `install.sh` as the canonical apply script name, plus `uninstall.sh`, `reload.sh`, `start.sh`, `stop.sh`, and `restart.sh` when producing runnable artifacts
+- generate helper scripts with `install.sh` as the canonical apply script name, plus `uninstall.sh`, `reload.sh`, `start.sh`, `stop.sh`, and `restart.sh` when producing runnable artifacts, using the reviewed shell templates under `references/template/` as the default source
 - identify required repo-local companion files such as config files, templates, seed data, or initialization assets that must be shipped alongside Quadlet output for the deployment to run correctly
 - validate env completeness before claiming runnable output, including missing required keys and suspicious env-key mismatches
 - work closely with the user to confirm deployment-specific environment values and operational choices
@@ -202,9 +202,11 @@ Tasks in this phase:
 1. Generate the Quadlet files in the current working directory by default so the user can review them before applying them.
 2. Generate the env file or env delta only when needed for runnable output.
 3. Generate helper scripts such as `install.sh`, `uninstall.sh`, `reload.sh`, `start.sh`, `stop.sh`, and `restart.sh` when they materially help the user apply and operate the result.
+   - Generate these shell scripts by adapting the reviewed templates under `references/template/`.
    - Use `install.sh` as the default and canonical script name for applying the reviewed artifact set.
    - Do not also generate `apply.sh` unless the user explicitly asks for that alternate name.
    - `install.sh` should copy only Quadlet unit files into the chosen Quadlet target directory. Required env files, mounted config, scripts, and other runtime support files should remain in the reviewed current-directory deliverable set and be referenced from Quadlet via absolute host paths.
+   - helper shell scripts must not hardcode exact Quadlet filenames or assume a fixed number of Quadlet files. They should operate on the reviewed Quadlet set via the shared generated prefix, using shared-prefix glob matching such as `<prefix>*`.
    - `install.sh` should not start, stop, restart, or reload services as a side effect.
    - `uninstall.sh` should remove only the previously installed reviewed Quadlet unit files from the chosen Quadlet target directory.
    - `uninstall.sh` should stop affected services before removing their installed unit files, and should not delete support files from the current-directory deliverable set, unrelated files, shared directories, named volumes, images, or Podman objects unless the user explicitly asks for that broader cleanup.
@@ -234,7 +236,6 @@ Use this execution checklist template:
 - [ ] runnable-output gate passed before describing the result as runnable
 - [ ] helper scripts operate on the same reviewed artifact set that finalize approved
 - [ ] chosen output directory still matches the approved plan and no new file conflicts appeared before writing
-
 
 If you generate a README or operational notes, use the same language as the user unless the user explicitly asks for another language.
 

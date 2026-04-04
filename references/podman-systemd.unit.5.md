@@ -6,7 +6,7 @@ podman\-systemd.unit - systemd units using Podman Quadlet
 
 ## SYNOPSIS
 
-*name*.container, *name*.volume, *name*.network, *name*.kube *name*.image, *name*.build *name*.pod, *name*.artifact
+_name_.container, _name_.volume, _name_.network, _name_.kube _name_.image, _name_.build _name_.pod, _name_.artifact
 
 ### Podman rootful unit search path
 
@@ -14,26 +14,26 @@ Quadlet files for the root user can be placed in the following directories order
 
 Temporary quadlets, usually used for testing:
 
-* /run/containers/systemd/
+- /run/containers/systemd/
 
 System administrator's defined quadlets:
 
-* /etc/containers/systemd/
+- /etc/containers/systemd/
 
 Distribution defined quadlets:
 
-* /usr/share/containers/systemd/
+- /usr/share/containers/systemd/
 
 ### Podman rootless unit search path
 
 Quadlet files for non-root users can be placed in the following directories:
 
- * $XDG_RUNTIME_DIR/containers/systemd/
- * $XDG_CONFIG_HOME/containers/systemd/ or ~/.config/containers/systemd/
- * /etc/containers/systemd/users/${UID}
- * /etc/containers/systemd/users/
- * /usr/share/containers/systemd/users/${UID}
- * /usr/share/containers/systemd/users/
+- $XDG_RUNTIME_DIR/containers/systemd/
+- $XDG_CONFIG_HOME/containers/systemd/ or ~/.config/containers/systemd/
+- /etc/containers/systemd/users/${UID}
+- /etc/containers/systemd/users/
+- /usr/share/containers/systemd/users/${UID}
+- /usr/share/containers/systemd/users/
 
 ### Using symbolic links
 
@@ -91,9 +91,9 @@ and add the unit file to one of the above rootless unit search paths.
 
 When a Quadlet unit starts, Podman may need to pull or build container images, which can take significantly longer
 than systemd's default 90-second service startup limit. If this causes the unit to fail, you can either pre-pull the
-required images or increase the service's startup timeout using the *TimeoutStartSec* option. Keep in mind, however,
+required images or increase the service's startup timeout using the _TimeoutStartSec_ option. Keep in mind, however,
 that for units that specify `Type=oneshot`, the startup timeout is disabled by default (set to infinity), so
-*TimeoutStartSec* must be explicitly configured if a timeout is desired. For further details on *TimeoutStartSec*, see `systemd.service(5)`.
+_TimeoutStartSec_ must be explicitly configured if a timeout is desired. For further details on _TimeoutStartSec_, see `systemd.service(5)`.
 
 Adding the following snippet to a Quadlet file extends the startup timeout to 15 minutes.
 
@@ -119,6 +119,7 @@ leaves the job in a "started" state which prevents subsequent activations by the
 `systemd.service(5)` man page.
 
 Examples for such cases:
+
 - `.container` file with an image that exits after their entrypoint has finished
 
 - `.kube` file pointing to a Kubernetes Yaml file that does not define any containers. E.g. PVCs only
@@ -203,6 +204,7 @@ In addition, if you do `ln -s sleep@.container sleep@10.container` you
 will also have a 10 second sleep running at boot. And, if you want
 that particular instance to be running with another image, you can
 create a drop-in file like `sleep@10.container.d/10-image.conf`:
+
 ```
 [Container]
 Image=quay.io/centos/centos
@@ -216,6 +218,7 @@ to mount a distinct volume. In this case you can create a template Quadlet
 `foo-data@.volume` (the name is arbitrary) and reference it in `foo@.container`:
 
 `foo-data@.volume`:
+
 ```
 [Volume]
 # Optional: without an explicit VolumeName, Quadlet auto-generates one with a
@@ -225,6 +228,7 @@ VolumeName=my-name-%i
 ```
 
 `foo@.container`:
+
 ```
 [Container]
 Volume=foo-data@.volume:/mnt/path
@@ -257,11 +261,13 @@ used an option from a newer version of Podman Quadlet and the
 generator failed to create a service file.
 
 View the generated files and/or error messages with:
+
 ```
 /usr/lib/systemd/system-generators/podman-system-generator {--user} --dryrun
 ```
 
 Alternatively, show only the errors with:
+
 ```
 systemd-analyze {--user} --generators=true verify example.service
 ```
@@ -302,6 +308,7 @@ Quadlet will automatically translate dependencies, specified in the keys
 of the `[Unit]` section, between different Quadlet units.
 
 For example the `fedora.container` unit below specifies a dependency on the `basic.container` unit.
+
 ```
 [Unit]
 After=basic.container
@@ -335,97 +342,97 @@ There is only one required key, `Image`, which defines the container image the s
 
 Valid options for `[Container]` are listed below:
 
-| **[Container] options**              | **podman run equivalent**                            |
-|--------------------------------------|------------------------------------------------------|
-| AddCapability=CAP                    | --cap-add CAP                                        |
-| AddDevice=/dev/foo                   | --device /dev/foo                                    |
-| AddHost=example\.com:192.168.10.11   | --add-host example.com:192.168.10.11                 |
-| Annotation="XYZ"                     | --annotation "XYZ"                                   |
-| AppArmor="alternate-profile"         | --security-opt apparmor=alternate-profile            |
-| AutoUpdate=registry                  | --label "io.containers.autoupdate=registry"          |
-| CgroupsMode=no-conmon                | --cgroups=no-conmon                                  |
-| ContainerName=name                   | --name name                                          |
-| ContainersConfModule=/etc/nvd\.conf  | --module=/etc/nvd\.conf                              |
-| DNS=192.168.55.1                     | --dns=192.168.55.1                                   |
-| DNSOption=ndots:1                    | --dns-option=ndots:1                                 |
-| DNSSearch=example.com                | --dns-search example.com                             |
-| DropCapability=CAP                   | --cap-drop=CAP                                       |
-| Entrypoint=/foo.sh                   | --entrypoint=/foo.sh                                 |
-| Environment=foo=bar                  | --env foo=bar                                        |
-| EnvironmentFile=/tmp/env             | --env-file /tmp/env                                  |
-| EnvironmentHost=true                 | --env-host                                           |
-| Exec=/usr/bin/command                | Command after image specification - /usr/bin/command |
-| ExposeHostPort=50-59                 | --expose 50-59                                       |
-| GIDMap=0:10000:10                    | --gidmap=0:10000:10                                  |
-| GlobalArgs=--log-level=debug         | --log-level=debug                                    |
-| Group=1234                           | --user UID:1234                                      |
-| GroupAdd=keep-groups                 | --group-add=keep-groups                              |
-| HealthCmd=/usr/bin/command           | --health-cmd=/usr/bin/command                        |
-| HealthInterval=2m                    | --health-interval=2m                                 |
-| HealthLogDestination=/foo/log        | --health-log-destination=/foo/log                    |
-| HealthMaxLogCount=5                  | --health-max-log-count=5                             |
-| HealthMaxLogSize=500                 | --health-max-log-size=500                            |
-| HealthOnFailure=kill                 | --health-on-failure=kill                             |
-| HealthRetries=5                      | --health-retries=5                                   |
-| HealthStartPeriod=1m                 | --health-start-period=1m                             |
-| HealthStartupCmd=command             | --health-startup-cmd=command                         |
-| HealthStartupInterval=1m             | --health-startup-interval=1m                         |
-| HealthStartupRetries=8               | --health-startup-retries=8                           |
-| HealthStartupSuccess=2               | --health-startup-success=2                           |
-| HealthStartupTimeout=1m33s           | --health-startup-timeout=1m33s                       |
-| HealthTimeout=20s                    | --health-timeout=20s                                 |
-| HostName=example.com                 | --hostname example.com                               |
-| HttpProxy=true                       | --http-proxy=true                                    |
-| Image=ubi8                           | Image specification - ubi8                           |
-| IP=192.5.0.1                         | --ip 192.5.0.1                                       |
-| IP6=2001:db8::1                      | --ip6 2001:db8::1                                    |
-| Label="XYZ"                          | --label "XYZ"                                        |
-| LogDriver=journald                   | --log-driver journald                                |
-| LogOpt=path=/var/log/mykube\.json    | --log-opt path=/var/log/mykube\.json                 |
-| Mask=/proc/sys/foo\:/proc/sys/bar    | --security-opt mask=/proc/sys/foo:/proc/sys/bar      |
-| Memory=20g                           | --memory 20g                                         |
-| Mount=type=...                       | --mount type=...                                     |
-| Network=host                         | --network host                                       |
-| NetworkAlias=name                    | --network-alias name                                 |
-| NoNewPrivileges=true                 | --security-opt no-new-privileges                     |
-| Notify=true                          | --sdnotify container                                 |
-| PidsLimit=10000                      | --pids-limit 10000                                   |
-| Pod=pod-name                         | --pod=pod-name                                       |
-| PodmanArgs=--publish 8080:80         | --publish 8080:80                                    |
-| PublishPort=8080:80                  | --publish 8080:80                                    |
-| Pull=never                           | --pull never                                         |
-| ReadOnly=true                        | --read-only                                          |
-| ReadOnlyTmpfs=true                   | --read-only-tmpfs                                    |
-| ReloadCmd=/usr/bin/command           | Add ExecReload and run exec with the value           |
-| ReloadSignal=SIGHUP                  | Add ExecReload and run kill with the signal          |
-| Retry=5                              | --retry=5                                            |
-| RetryDelay=5s                        | --retry-delay=5s                                     |
-| Rootfs=/var/lib/rootfs               | --rootfs /var/lib/rootfs                             |
-| RunInit=true                         | --init                                               |
-| SeccompProfile=/tmp/s.json           | --security-opt seccomp=/tmp/s.json                   |
-| Secret=secret                        | --secret=secret[,opt=opt ...]                        |
-| SecurityLabelDisable=true            | --security-opt label=disable                         |
-| SecurityLabelFileType=usr_t          | --security-opt label=filetype:usr_t                  |
-| SecurityLabelLevel=s0:c1,c2          | --security-opt label=level:s0:c1,c2                  |
-| SecurityLabelNested=true             | --security-opt label=nested                          |
-| SecurityLabelType=spc_t              | --security-opt label=type:spc_t                      |
-| ServiceName=name                     | Name the systemd unit `name.service`                 |
-| ShmSize=100m                         | --shm-size=100m                                      |
-| StartWithPod=true                    | If Pod= is defined, container is started by pod      |
-| StopSignal=SIGINT                    | --stop-signal=SIGINT                                 |
-| StopTimeout=20                       | --stop-timeout=20                                    |
-| SubGIDMap=gtest                      | --subgidname=gtest                                   |
-| SubUIDMap=utest                      | --subuidname=utest                                   |
-| Sysctl=name=value                    | --sysctl=name=value                                  |
-| Timezone=local                       | --tz local                                           |
-| Tmpfs=/work                          | --tmpfs /work                                        |
-| UIDMap=0:10000:10                    | --uidmap=0:10000:10                                  |
-| Ulimit=nofile=1000:10000             | --ulimit nofile=1000:10000                           |
-| Unmask=ALL                           | --security-opt unmask=ALL                            |
-| User=bin                             | --user bin                                           |
-| UserNS=keep-id:uid=200,gid=210       | --userns keep-id:uid=200,gid=210                     |
-| Volume=/source:/dest                 | --volume /source:/dest                               |
-| WorkingDir=$HOME                     | --workdir $HOME                                      |
+| **[Container] options**             | **podman run equivalent**                            |
+| ----------------------------------- | ---------------------------------------------------- |
+| AddCapability=CAP                   | --cap-add CAP                                        |
+| AddDevice=/dev/foo                  | --device /dev/foo                                    |
+| AddHost=example\.com:192.168.10.11  | --add-host example.com:192.168.10.11                 |
+| Annotation="XYZ"                    | --annotation "XYZ"                                   |
+| AppArmor="alternate-profile"        | --security-opt apparmor=alternate-profile            |
+| AutoUpdate=registry                 | --label "io.containers.autoupdate=registry"          |
+| CgroupsMode=no-conmon               | --cgroups=no-conmon                                  |
+| ContainerName=name                  | --name name                                          |
+| ContainersConfModule=/etc/nvd\.conf | --module=/etc/nvd\.conf                              |
+| DNS=192.168.55.1                    | --dns=192.168.55.1                                   |
+| DNSOption=ndots:1                   | --dns-option=ndots:1                                 |
+| DNSSearch=example.com               | --dns-search example.com                             |
+| DropCapability=CAP                  | --cap-drop=CAP                                       |
+| Entrypoint=/foo.sh                  | --entrypoint=/foo.sh                                 |
+| Environment=foo=bar                 | --env foo=bar                                        |
+| EnvironmentFile=/tmp/env            | --env-file /tmp/env                                  |
+| EnvironmentHost=true                | --env-host                                           |
+| Exec=/usr/bin/command               | Command after image specification - /usr/bin/command |
+| ExposeHostPort=50-59                | --expose 50-59                                       |
+| GIDMap=0:10000:10                   | --gidmap=0:10000:10                                  |
+| GlobalArgs=--log-level=debug        | --log-level=debug                                    |
+| Group=1234                          | --user UID:1234                                      |
+| GroupAdd=keep-groups                | --group-add=keep-groups                              |
+| HealthCmd=/usr/bin/command          | --health-cmd=/usr/bin/command                        |
+| HealthInterval=2m                   | --health-interval=2m                                 |
+| HealthLogDestination=/foo/log       | --health-log-destination=/foo/log                    |
+| HealthMaxLogCount=5                 | --health-max-log-count=5                             |
+| HealthMaxLogSize=500                | --health-max-log-size=500                            |
+| HealthOnFailure=kill                | --health-on-failure=kill                             |
+| HealthRetries=5                     | --health-retries=5                                   |
+| HealthStartPeriod=1m                | --health-start-period=1m                             |
+| HealthStartupCmd=command            | --health-startup-cmd=command                         |
+| HealthStartupInterval=1m            | --health-startup-interval=1m                         |
+| HealthStartupRetries=8              | --health-startup-retries=8                           |
+| HealthStartupSuccess=2              | --health-startup-success=2                           |
+| HealthStartupTimeout=1m33s          | --health-startup-timeout=1m33s                       |
+| HealthTimeout=20s                   | --health-timeout=20s                                 |
+| HostName=example.com                | --hostname example.com                               |
+| HttpProxy=true                      | --http-proxy=true                                    |
+| Image=ubi8                          | Image specification - ubi8                           |
+| IP=192.5.0.1                        | --ip 192.5.0.1                                       |
+| IP6=2001:db8::1                     | --ip6 2001:db8::1                                    |
+| Label="XYZ"                         | --label "XYZ"                                        |
+| LogDriver=journald                  | --log-driver journald                                |
+| LogOpt=path=/var/log/mykube\.json   | --log-opt path=/var/log/mykube\.json                 |
+| Mask=/proc/sys/foo\:/proc/sys/bar   | --security-opt mask=/proc/sys/foo:/proc/sys/bar      |
+| Memory=20g                          | --memory 20g                                         |
+| Mount=type=...                      | --mount type=...                                     |
+| Network=host                        | --network host                                       |
+| NetworkAlias=name                   | --network-alias name                                 |
+| NoNewPrivileges=true                | --security-opt no-new-privileges                     |
+| Notify=true                         | --sdnotify container                                 |
+| PidsLimit=10000                     | --pids-limit 10000                                   |
+| Pod=pod-name                        | --pod=pod-name                                       |
+| PodmanArgs=--publish 8080:80        | --publish 8080:80                                    |
+| PublishPort=8080:80                 | --publish 8080:80                                    |
+| Pull=never                          | --pull never                                         |
+| ReadOnly=true                       | --read-only                                          |
+| ReadOnlyTmpfs=true                  | --read-only-tmpfs                                    |
+| ReloadCmd=/usr/bin/command          | Add ExecReload and run exec with the value           |
+| ReloadSignal=SIGHUP                 | Add ExecReload and run kill with the signal          |
+| Retry=5                             | --retry=5                                            |
+| RetryDelay=5s                       | --retry-delay=5s                                     |
+| Rootfs=/var/lib/rootfs              | --rootfs /var/lib/rootfs                             |
+| RunInit=true                        | --init                                               |
+| SeccompProfile=/tmp/s.json          | --security-opt seccomp=/tmp/s.json                   |
+| Secret=secret                       | --secret=secret[,opt=opt ...]                        |
+| SecurityLabelDisable=true           | --security-opt label=disable                         |
+| SecurityLabelFileType=usr_t         | --security-opt label=filetype:usr_t                  |
+| SecurityLabelLevel=s0:c1,c2         | --security-opt label=level:s0:c1,c2                  |
+| SecurityLabelNested=true            | --security-opt label=nested                          |
+| SecurityLabelType=spc_t             | --security-opt label=type:spc_t                      |
+| ServiceName=name                    | Name the systemd unit `name.service`                 |
+| ShmSize=100m                        | --shm-size=100m                                      |
+| StartWithPod=true                   | If Pod= is defined, container is started by pod      |
+| StopSignal=SIGINT                   | --stop-signal=SIGINT                                 |
+| StopTimeout=20                      | --stop-timeout=20                                    |
+| SubGIDMap=gtest                     | --subgidname=gtest                                   |
+| SubUIDMap=utest                     | --subuidname=utest                                   |
+| Sysctl=name=value                   | --sysctl=name=value                                  |
+| Timezone=local                      | --tz local                                           |
+| Tmpfs=/work                         | --tmpfs /work                                        |
+| UIDMap=0:10000:10                   | --uidmap=0:10000:10                                  |
+| Ulimit=nofile=1000:10000            | --ulimit nofile=1000:10000                           |
+| Unmask=ALL                          | --security-opt unmask=ALL                            |
+| User=bin                            | --user bin                                           |
+| UserNS=keep-id:uid=200,gid=210      | --userns keep-id:uid=200,gid=210                     |
+| Volume=/source:/dest                | --volume /source:/dest                               |
+| WorkingDir=$HOME                    | --workdir $HOME                                      |
 
 Description of `[Container]` section are:
 
@@ -436,6 +443,7 @@ Add these capabilities, in addition to the default Podman capability set, to the
 This is a space separated list of capabilities. This key can be listed multiple times.
 
 For example:
+
 ```
 AddCapability=CAP_DAC_OVERRIDE CAP_IPC_OWNER
 ```
@@ -453,7 +461,7 @@ This key can be listed multiple times.
 
 ### `AddHost=`
 
-Add  host-to-IP mapping to /etc/hosts.
+Add host-to-IP mapping to /etc/hosts.
 The format is `hostname:ip`.
 
 Equivalent to the Podman `--add-host` option.
@@ -474,9 +482,9 @@ Sets the apparmor confinement profile for the container. A value of `unconfined`
 
 Indicates whether the container will be auto-updated ([podman-auto-update(1)](podman-auto-update.1.md)). The following values are supported:
 
-* `registry`: Requires a fully-qualified image reference (e.g., quay.io/podman/stable:latest) to be used to create the container. This enforcement is necessary to know which image to actually check and pull. If an image ID was used, Podman does not know which image to check/pull anymore.
+- `registry`: Requires a fully-qualified image reference (e.g., quay.io/podman/stable:latest) to be used to create the container. This enforcement is necessary to know which image to actually check and pull. If an image ID was used, Podman does not know which image to check/pull anymore.
 
-* `local`: Tells Podman to compare the image a container is using to the image with its raw name in local storage. If an image is updated locally, Podman simply restarts the systemd unit executing the container.
+- `local`: Tells Podman to compare the image a container is using to the image with its raw name in local storage. If an image is updated locally, Podman simply restarts the systemd unit executing the container.
 
 ### `CgroupsMode=`
 
@@ -525,6 +533,7 @@ Drop these capabilities from the default podman capability set, or `all` to drop
 This is a space separated list of capabilities. This key can be listed multiple times.
 
 For example:
+
 ```
 DropCapability=CAP_DAC_OVERRIDE CAP_IPC_OWNER
 ```
@@ -621,9 +630,9 @@ Set the destination of the HealthCheck log. Directory path, local or events_logg
 (Default: local)
 Equivalent to the Podman `--health-log-destination` option.
 
-* `local`: (default) HealthCheck logs are stored in overlay containers. (For example: `$runroot/healthcheck.log`)
-* `directory`: creates a log file named `<container-ID>-healthcheck.log` with HealthCheck logs in the specified directory.
-* `events_logger`: The log will be written with logging mechanism set by events_logger. It also saves the log to a default directory, for performance on a system with a large number of logs.
+- `local`: (default) HealthCheck logs are stored in overlay containers. (For example: `$runroot/healthcheck.log`)
+- `directory`: creates a log file named `<container-ID>-healthcheck.log` with HealthCheck logs in the specified directory.
+- `events_logger`: The log will be written with logging mechanism set by events_logger. It also saves the log to a default directory, for performance on a system with a large number of logs.
 
 ### `HealthMaxLogCount=`
 
@@ -710,8 +719,8 @@ The format of the name is the same as when passed to `podman pull`. So, it suppo
 
 Special Cases:
 
-* If the `name` of the image ends with `.image`, Quadlet will use the image pulled by the corresponding `.image` file, and the generated systemd service contains a dependency on the `$name-image.service` (or the service name set in the .image file). Note that the corresponding `.image` file must exist.
-* If the `name` of the image ends with `.build`, Quadlet will use the image built by the corresponding `.build` file, and the generated systemd service contains a dependency on the `$name-build.service`. Note: the corresponding `.build` file must exist.
+- If the `name` of the image ends with `.image`, Quadlet will use the image pulled by the corresponding `.image` file, and the generated systemd service contains a dependency on the `$name-image.service` (or the service name set in the .image file). Note that the corresponding `.image` file must exist.
+- If the `name` of the image ends with `.build`, Quadlet will use the image built by the corresponding `.build` file, and the generated systemd service contains a dependency on the `$name-build.service`. Note: the corresponding `.build` file must exist.
 
 ### `IP=`
 
@@ -757,8 +766,8 @@ generally has the form `type=TYPE,TYPE-SPECIFIC-OPTION[,...]`.
 
 Special cases:
 
-* For `type=volume`, if `source` ends with `.volume`, the Podman named volume generated by the corresponding `.volume` file is used.
-* For `type=image`, if `source` ends with `.image`, the image generated by the corresponding `.image` file is used.
+- For `type=volume`, if `source` ends with `.volume`, the Podman named volume generated by the corresponding `.volume` file is used.
+- For `type=image`, if `source` ends with `.image`, the image generated by the corresponding `.image` file is used.
 
 In both cases, the generated systemd service will contain a dependency on the service generated for the corresponding unit. Note: the corresponding `.volume` or `.image` file must exist.
 
@@ -772,14 +781,14 @@ not set up networking in the container.
 
 Special cases:
 
-* If the `name` of the network ends with `.network`, a Podman network called
-`systemd-$name` is used, and the generated systemd service contains
-a dependency on the `$name-network.service`. Such a network can be automatically
-created by using a `$name.network` Quadlet file. Note: the corresponding `.network` file must exist.
+- If the `name` of the network ends with `.network`, a Podman network called
+  `systemd-$name` is used, and the generated systemd service contains
+  a dependency on the `$name-network.service`. Such a network can be automatically
+  created by using a `$name.network` Quadlet file. Note: the corresponding `.network` file must exist.
 
-* If the `name` ends with `.container`,
-the container will reuse the network stack of another container created by `$name.container`.
-The generated systemd service contains a dependency on `$name.service`. Note: the corresponding `.container` file must exist.
+- If the `name` ends with `.container`,
+  the container will reuse the network stack of another container created by `$name.container`.
+  The generated systemd service contains a dependency on `$name.service`. Note: the corresponding `.container` file must exist.
 
 This key can be listed multiple times.
 
@@ -821,7 +830,6 @@ Specify a Quadlet `.pod` unit to link the container to.
 The value must take the form of `<name>.pod` and the `.pod` unit must exist.
 
 Quadlet will add all the necessary parameters to link between the container and the pod and between their corresponding services.
-
 
 ### `PodmanArgs=`
 
@@ -988,6 +996,7 @@ Configures namespaced kernel parameters for the container. The format is `Sysctl
 This is a space separated list of kernel parameters. This key can be listed multiple times.
 
 For example:
+
 ```
 Sysctl=net.ipv6.conf.all.disable_ipv6=1 net.ipv6.conf.all.use_tempaddr=1
 ```
@@ -1018,7 +1027,7 @@ This key can be listed multiple times.
 
 ### `Unmask=`
 
-Specify the paths to unmask separated by a colon. unmask=ALL or /path/1:/path/2, or shell expanded paths (/proc/*):
+Specify the paths to unmask separated by a colon. unmask=ALL or /path/1:/path/2, or shell expanded paths (/proc/\*):
 
 If set to `ALL`, Podman will unmask all the paths that are masked or made read-only by default.
 
@@ -1048,7 +1057,7 @@ If `SOURCE-VOLUME` starts with `.`, Quadlet resolves the path relative to the lo
 
 Special case:
 
-* If `SOURCE-VOLUME` ends with `.volume`, a Podman named volume called `systemd-$name` is used as the source, and the generated systemd service contains a dependency on the `$name-volume.service`. Note that the corresponding `.volume` file must exist.
+- If `SOURCE-VOLUME` ends with `.volume`, a Podman named volume called `systemd-$name` is used as the source, and the generated systemd service contains a dependency on the `$name-volume.service`. Note that the corresponding `.volume` file must exist.
 
 This key can be listed multiple times.
 
@@ -1076,39 +1085,39 @@ when containers exit, set `Restart=always` in the `[Service]` section of the `.p
 
 Valid options for `[Pod]` are listed below:
 
-| **[Pod] options**                   | **podman pod create equivalent**       |
-|-------------------------------------|----------------------------------------|
-| AddHost=example\.com:192.168.10.11  | --add-host example.com:192.168.10.11   |
-| ContainersConfModule=/etc/nvd\.conf | --module=/etc/nvd\.conf                |
-| DNS=192.168.55.1                    | --dns=192.168.55.1                     |
-| DNSOption=ndots:1                   | --dns-option=ndots:1                   |
-| DNSSearch=example.com               | --dns-search example.com               |
-| ExitPolicy=stop                     | --exit-policy stop                     |
-| GIDMap=0:10000:10                   | --gidmap=0:10000:10                    |
-| GlobalArgs=--log-level=debug        | --log-level=debug                      |
-| HostName=name                       | --hostname=name                        |
-| IP=192.5.0.1                        | --ip 192.5.0.1                         |
-| IP6=2001:db8::1                     | --ip6 2001:db8::1                      |
-| Label="XYZ"                         | --label "XYZ"                          |
-| Network=host                        | --network host                         |
-| NetworkAlias=name                   | --network-alias name                   |
-| PodmanArgs=\-\-cpus=2               | --cpus=2                               |
-| PodName=name                        | --name=name                            |
-| PublishPort=8080:80                 | --publish 8080:80                      |
-| ServiceName=name                    | Name the systemd unit `name.service`   |
-| ShmSize=100m                        | --shm-size=100m                        |
-| StopTimeout=20                      | --time=20                              |
-| SubGIDMap=gtest                     | --subgidname=gtest                     |
-| SubUIDMap=utest                     | --subuidname=utest                     |
-| UIDMap=0:10000:10                   | --uidmap=0:10000:10                    |
-| UserNS=keep-id:uid=200,gid=210      | --userns keep-id:uid=200,gid=210       |
-| Volume=/source:/dest                | --volume /source:/dest                 |
+| **[Pod] options**                   | **podman pod create equivalent**     |
+| ----------------------------------- | ------------------------------------ |
+| AddHost=example\.com:192.168.10.11  | --add-host example.com:192.168.10.11 |
+| ContainersConfModule=/etc/nvd\.conf | --module=/etc/nvd\.conf              |
+| DNS=192.168.55.1                    | --dns=192.168.55.1                   |
+| DNSOption=ndots:1                   | --dns-option=ndots:1                 |
+| DNSSearch=example.com               | --dns-search example.com             |
+| ExitPolicy=stop                     | --exit-policy stop                   |
+| GIDMap=0:10000:10                   | --gidmap=0:10000:10                  |
+| GlobalArgs=--log-level=debug        | --log-level=debug                    |
+| HostName=name                       | --hostname=name                      |
+| IP=192.5.0.1                        | --ip 192.5.0.1                       |
+| IP6=2001:db8::1                     | --ip6 2001:db8::1                    |
+| Label="XYZ"                         | --label "XYZ"                        |
+| Network=host                        | --network host                       |
+| NetworkAlias=name                   | --network-alias name                 |
+| PodmanArgs=\-\-cpus=2               | --cpus=2                             |
+| PodName=name                        | --name=name                          |
+| PublishPort=8080:80                 | --publish 8080:80                    |
+| ServiceName=name                    | Name the systemd unit `name.service` |
+| ShmSize=100m                        | --shm-size=100m                      |
+| StopTimeout=20                      | --time=20                            |
+| SubGIDMap=gtest                     | --subgidname=gtest                   |
+| SubUIDMap=utest                     | --subuidname=utest                   |
+| UIDMap=0:10000:10                   | --uidmap=0:10000:10                  |
+| UserNS=keep-id:uid=200,gid=210      | --userns keep-id:uid=200,gid=210     |
+| Volume=/source:/dest                | --volume /source:/dest               |
 
 Supported keys in the `[Pod]` section are:
 
 ### `AddHost=`
 
-Add  host-to-IP mapping to /etc/hosts.
+Add host-to-IP mapping to /etc/hosts.
 The format is `hostname:ip`.
 
 Equivalent to the Podman `--add-host` option.
@@ -1196,7 +1205,7 @@ For example, use `host` to use the host network in the pod, or `none` to not set
 
 Special case:
 
-* If the `name` of the network ends with `.network`, Quadlet will look for the corresponding `.network` Quadlet unit. If found, Quadlet will use the name of the Network set in the Unit, otherwise, `systemd-$name` is used.
+- If the `name` of the network ends with `.network`, Quadlet will look for the corresponding `.network` Quadlet unit. If found, Quadlet will use the name of the Network set in the Unit, otherwise, `systemd-$name` is used.
 
 The generated systemd service contains a dependency on the service unit generated for that `.network` unit. Note: the corresponding `.network` file must exist.
 
@@ -1252,7 +1261,6 @@ When using `host` networking via `Network=host`, the `PublishPort=` option canno
 
 This key can be listed multiple times.
 
-
 ### `ServiceName=`
 
 By default, Quadlet will name the systemd service unit by appending `-pod` to the name of the Quadlet.
@@ -1303,7 +1311,7 @@ If `SOURCE-VOLUME` starts with `.`, Quadlet resolves the path relative to the lo
 
 Special case:
 
-* If `SOURCE-VOLUME` ends with `.volume`, Quadlet will look for the corresponding `.volume` Quadlet unit. If found, Quadlet will use the name of the Volume set in the Unit, otherwise, `systemd-$name` is used. Note: the corresponding `.volume` file must exist.
+- If `SOURCE-VOLUME` ends with `.volume`, Quadlet will look for the corresponding `.volume` Quadlet unit. If found, Quadlet will use the name of the Volume set in the Unit, otherwise, `systemd-$name` is used. Note: the corresponding `.volume` file must exist.
 
 The generated systemd service contains a dependency on the service unit generated for that `.volume` unit,
 or on `$name-volume.service` if the `.volume` unit is not found.
@@ -1323,7 +1331,7 @@ There is only one required key, `Yaml`, which defines the path to the Kubernetes
 Valid options for `[Kube]` are listed below:
 
 | **[Kube] options**                  | **podman kube play equivalent**                                  |
-| ------------------------------------| -----------------------------------------------------------------|
+| ----------------------------------- | ---------------------------------------------------------------- |
 | AutoUpdate=registry                 | --annotation "io.containers.autoupdate=registry"                 |
 | ConfigMap=/tmp/config.map           | --config-map /tmp/config.map                                     |
 | ContainersConfModule=/etc/nvd\.conf | --module=/etc/nvd\.conf                                          |
@@ -1345,11 +1353,11 @@ Supported keys in the `[Kube]` section are:
 
 Indicates whether containers will be auto-updated ([podman-auto-update(1)](podman-auto-update.1.md)). AutoUpdate can be specified multiple times. The following values are supported:
 
-* `registry`: Requires a fully-qualified image reference (e.g., quay.io/podman/stable:latest) to be used to create the container. This enforcement is necessary to know which images to actually check and pull. If an image ID was used, Podman does not know which image to check/pull anymore.
+- `registry`: Requires a fully-qualified image reference (e.g., quay.io/podman/stable:latest) to be used to create the container. This enforcement is necessary to know which images to actually check and pull. If an image ID was used, Podman does not know which image to check/pull anymore.
 
-* `local`: Tells Podman to compare the image a container is using to the image with its raw name in local storage. If an image is updated locally, Podman simply restarts the systemd unit executing the Kubernetes Quadlet.
+- `local`: Tells Podman to compare the image a container is using to the image with its raw name in local storage. If an image is updated locally, Podman simply restarts the systemd unit executing the Kubernetes Quadlet.
 
-* `name/(local|registry)`: Tells Podman to perform the `local` or `registry` autoupdate on the specified container name.
+- `name/(local|registry)`: Tells Podman to perform the `local` or `registry` autoupdate on the specified container name.
 
 ### `ConfigMap=`
 
@@ -1368,6 +1376,7 @@ This key can be listed multiple times.
 ### `ExitCodePropagation=`
 
 Control how the main PID of the systemd service should exit. The following values are supported:
+
 - `all`: exit non-zero if all containers have failed (i.e., exited non-zero)
 - `any`: exit non-zero if any container has failed
 - `none`: exit zero and ignore failed containers
@@ -1404,7 +1413,7 @@ not set up networking in the container.
 
 Special case:
 
-* If the `name` of the network ends with `.network`, a Podman network called `systemd-$name` is used, and the generated systemd service contains a dependency on the `$name-network.service`. Such a network can be automatically created by using a `$name.network` Quadlet file. Note: the corresponding `.network` file must exist.
+- If the `name` of the network ends with `.network`, a Podman network called `systemd-$name` is used, and the generated systemd service contains a dependency on the `$name-network.service`. Such a network can be automatically created by using a `$name.network` Quadlet file. Note: the corresponding `.network` file must exist.
 
 This key can be listed multiple times.
 
@@ -1457,7 +1466,8 @@ Please note that if the `WorkingDirectory` field of the `Service` group is set,
 Quadlet will not set it even if `SetWorkingDirectory` is set
 
 Special case:
-* If multiple `Yaml` path are provided only `unit` is supported.
+
+- If multiple `Yaml` path are provided only `unit` is supported.
 
 ### `UserNS=`
 
@@ -1490,7 +1500,7 @@ particularly interesting when using special options to control network creation,
 Valid options for `[Network]` are listed below:
 
 | **[Network] options**               | **podman network create equivalent**                            |
-|-------------------------------------|-----------------------------------------------------------------|
+| ----------------------------------- | --------------------------------------------------------------- |
 | ContainersConfModule=/etc/nvd\.conf | --module=/etc/nvd\.conf                                         |
 | DisableDNS=true                     | --disable-dns                                                   |
 | DNS=192.168.55.1                    | --dns=192.168.55.1                                              |
@@ -1558,7 +1568,7 @@ This key can be listed multiple times.
 
 ### `InterfaceName=`
 
-This option maps the *network_interface* option in the network config, see **podman network inspect**.
+This option maps the _network_interface_ option in the network config, see **podman network inspect**.
 Depending on the driver, this can have different effects; for `bridge`, it uses the bridge interface name.
 For `macvlan` and `ipvlan`, it is the parent device on the host. It is the same as `--opt parent=...`.
 
@@ -1662,7 +1672,7 @@ as Podman otherwise creates volumes with the default options.
 Valid options for `[Volume]` are listed below:
 
 | **[Volume] options**                | **podman volume create equivalent**       |
-|-------------------------------------|-------------------------------------------|
+| ----------------------------------- | ----------------------------------------- |
 | ContainersConfModule=/etc/nvd\.conf | --module=/etc/nvd\.conf                   |
 | Copy=true                           | --opt copy                                |
 | Device=tmpfs                        | --opt device=tmpfs                        |
@@ -1734,8 +1744,8 @@ The format of the name is the same as when passed to `podman pull`. So, it suppo
 
 Special case:
 
-* If the `name` of the image ends with `.image`, Quadlet will use the image
-pulled by the corresponding `.image` file, and the generated systemd service contains a dependency on the `$name-image.service` (or the service name set in the .image file). Note: the corresponding `.image` file must exist.
+- If the `name` of the image ends with `.image`, Quadlet will use the image
+  pulled by the corresponding `.image` file, and the generated systemd service contains a dependency on the `$name-image.service` (or the service name set in the .image file). Note: the corresponding `.image` file must exist.
 
 ### `Label=`
 
@@ -1805,7 +1815,7 @@ testing and development.
 Valid options for `[Build]` are listed below:
 
 | **[Build] options**                 | **podman build equivalent**                 |
-|-------------------------------------|---------------------------------------------|
+| ----------------------------------- | ------------------------------------------- |
 | Annotation=annotation=value         | --annotation=annotation=value               |
 | Arch=aarch64                        | --arch=aarch64                              |
 | AuthFile=/etc/registry/auth\.json   | --authfile=/etc/registry/auth\.json         |
@@ -1837,7 +1847,7 @@ Valid options for `[Build]` are listed below:
 
 ### `Annotation=`
 
-Add an image *annotation* (e.g. annotation=*value*) to the image metadata. Can be used multiple
+Add an image _annotation_ (e.g. annotation=_value_) to the image metadata. Can be used multiple
 times.
 
 This is equivalent to the `--annotation` option of `podman build`.
@@ -1857,7 +1867,7 @@ This is equivalent to the `--authfile` option of `podman build`.
 ### `BuildArg=`
 
 Specifies a build argument and its value in the same way environment variables are
-(e.g., env=*value*), but it is not added to the environment variable list in the
+(e.g., env=_value_), but it is not added to the environment variable list in the
 resulting image's configuration. Can be listed multiple times.
 
 This is equivalent to the `--build-arg` option of `podman build`.
@@ -1894,7 +1904,7 @@ This is equivalent to the `--dns-search` option of `podman build`.
 
 ### `Environment=`
 
-Add a value (e.g. env=*value*) to the built image. This uses the same format as [services in
+Add a value (e.g. env=_value_) to the built image. This uses the same format as [services in
 systemd](https://www.freedesktop.org/software/systemd/man/systemd.exec.html#Environment=) and can be
 listed multiple times.
 
@@ -1954,7 +1964,7 @@ This key can be listed multiple times. The first instance will be used as the na
 
 ### `Label=`
 
-Add an image *label* (e.g. label=*value*) to the image metadata. Can be used multiple times.
+Add an image _label_ (e.g. label=_value_) to the image metadata. Can be used multiple times.
 
 This is equivalent to the `--label` option of `podman build`.
 
@@ -1966,7 +1976,7 @@ or `none` to not set up networking.
 
 Special case:
 
-* If the `name` of the network ends with `.network`, Quadlet will look for the corresponding `.network` Quadlet unit. If found, Quadlet will use the name of the Network set in the Unit, otherwise, `systemd-$name` is used. The generated systemd service contains a dependency on the service unit generated for that `.network` unit, or on `$name-network.service` if the `.network` unit is not found. Note: the corresponding `.network` file must exist.
+- If the `name` of the network ends with `.network`, Quadlet will look for the corresponding `.network` Quadlet unit. If found, Quadlet will use the name of the Network set in the Unit, otherwise, `systemd-$name` is used. The generated systemd service contains a dependency on the service unit generated for that `.network` unit, or on `$name-network.service` if the `.network` unit is not found. Note: the corresponding `.network` file must exist.
 
 This key can be listed multiple times.
 
@@ -2061,7 +2071,7 @@ If `SOURCE-VOLUME` starts with `.`, Quadlet resolves the path relative to the lo
 
 Special case:
 
-* If `SOURCE-VOLUME` ends with `.volume`, Quadlet will look for the corresponding `.volume` Quadlet unit. If found, Quadlet will use the name of the Volume set in the Unit, otherwise, `systemd-$name` is used. The generated systemd service contains a dependency on the service unit generated for that `.volume` unit, or on `$name-volume.service` if the `.volume` unit is not found. Note: the corresponding `.volume` file must exist.
+- If `SOURCE-VOLUME` ends with `.volume`, Quadlet will look for the corresponding `.volume` Quadlet unit. If found, Quadlet will use the name of the Volume set in the Unit, otherwise, `systemd-$name` is used. The generated systemd service contains a dependency on the service unit generated for that `.volume` unit, or on `$name-volume.service` if the `.volume` unit is not found. Note: the corresponding `.volume` file must exist.
 
 This key can be listed multiple times.
 
@@ -2077,7 +2087,7 @@ particularly interesting when using special options to control image pulls.
 Valid options for `[Image]` are listed below:
 
 | **[Image] options**                    | **podman image pull equivalent**                 |
-|----------------------------------------|--------------------------------------------------|
+| -------------------------------------- | ------------------------------------------------ |
 | AllTags=true                           | --all-tags                                       |
 | Arch=aarch64                           | --arch=aarch64                                   |
 | AuthFile=/etc/registry/auth\.json      | --authfile=/etc/registry/auth\.json              |
@@ -2117,7 +2127,7 @@ This is equivalent to the Podman `--authfile` option.
 
 ### `CertDir=`
 
-Use certificates at path (*.crt, *.cert, *.key) to connect to the registry.
+Use certificates at path (_.crt, _.cert, \*.key) to connect to the registry.
 
 This is equivalent to the Podman `--cert-dir` option.
 
@@ -2170,6 +2180,7 @@ For example, an image saved into a `docker-archive` with the following Podman co
 `podman image save --format docker-archive --output /tmp/archive-file.tar quay.io/podman/stable:latest`
 
 requires setting
+
 - `Image=docker-archive:/tmp/archive-file.tar`
 - `ImageTag=quay.io/podman/stable:latest`
 
@@ -2240,21 +2251,21 @@ particularly useful for managing artifacts that containers need to mount or acce
 
 Valid options for `[Artifact]` are listed below:
 
-| **[Artifact] options**                      | **podman artifact pull equivalent**                    |
-|---------------------------------------------|--------------------------------------------------------|
-| Artifact=quay\.io/foobar/artifact:special   | podman artifact pull quay\.io/foobar/artifact:special  |
-| AuthFile=/etc/registry/auth\.json           | --authfile=/etc/registry/auth\.json                    |
-| CertDir=/etc/registry/certs                 | --cert-dir=/etc/registry/certs                         |
-| ContainersConfModule=/etc/nvd\.conf         | --module=/etc/nvd\.conf                                |
-| Creds=username:password                     | --creds=username:password                              |
-| DecryptionKey=/etc/registry\.key            | --decryption-key=/etc/registry\.key                    |
-| GlobalArgs=--log-level=debug                | --log-level=debug                                      |
-| PodmanArgs=--pull never                     | --pull never                                           |
-| Quiet=true                                  | --quiet                                                |
-| Retry=5                                     | --retry=5                                              |
-| RetryDelay=10s                              | --retry-delay=10s                                      |
-| ServiceName=my-artifact                     | Set the systemd service name to my-artifact.service   |
-| TLSVerify=false                             | --tls-verify=false                                     |
+| **[Artifact] options**                    | **podman artifact pull equivalent**                   |
+| ----------------------------------------- | ----------------------------------------------------- |
+| Artifact=quay\.io/foobar/artifact:special | podman artifact pull quay\.io/foobar/artifact:special |
+| AuthFile=/etc/registry/auth\.json         | --authfile=/etc/registry/auth\.json                   |
+| CertDir=/etc/registry/certs               | --cert-dir=/etc/registry/certs                        |
+| ContainersConfModule=/etc/nvd\.conf       | --module=/etc/nvd\.conf                               |
+| Creds=username:password                   | --creds=username:password                             |
+| DecryptionKey=/etc/registry\.key          | --decryption-key=/etc/registry\.key                   |
+| GlobalArgs=--log-level=debug              | --log-level=debug                                     |
+| PodmanArgs=--pull never                   | --pull never                                          |
+| Quiet=true                                | --quiet                                               |
+| Retry=5                                   | --retry=5                                             |
+| RetryDelay=10s                            | --retry-delay=10s                                     |
+| ServiceName=my-artifact                   | Set the systemd service name to my-artifact.service   |
+| TLSVerify=false                           | --tls-verify=false                                    |
 
 ### `Artifact=`
 
@@ -2271,7 +2282,7 @@ This is equivalent to the Podman `--authfile` option.
 
 ### `CertDir=`
 
-Use certificates at path (*.crt, *.cert, *.key) to connect to the registry.
+Use certificates at path (_.crt, _.cert, \*.key) to connect to the registry.
 
 This is equivalent to the Podman `--cert-dir` option.
 
@@ -2343,14 +2354,15 @@ Require HTTPS and verification of certificates when contacting registries.
 This is equivalent to the Podman `--tls-verify` option.
 
 ## Quadlet section [Quadlet]
+
 Some quadlet specific configuration is shared between different unit types. Those settings
 can be configured in the `[Quadlet]` section.
 
 Valid options for `[Quadlet]` are listed below:
 
-| **[Quadlet] options**      | **Description**                                   |
-|----------------------------|---------------------------------------------------|
-| DefaultDependencies=false  | Disable implicit network dependencies to the unit |
+| **[Quadlet] options**     | **Description**                                   |
+| ------------------------- | ------------------------------------------------- |
+| DefaultDependencies=false | Disable implicit network dependencies to the unit |
 
 ### `DefaultDependencies=`
 
@@ -2395,6 +2407,7 @@ WantedBy=multi-user.target default.target
 ```
 
 Example `test.kube`:
+
 ```
 [Unit]
 Description=A kubernetes yaml based service
@@ -2411,6 +2424,7 @@ WantedBy=multi-user.target default.target
 Example for locally built image to be used in a container with build-specific arguments:
 
 `test.build`
+
 ```
 [Build]
 # Tag the image to be built
@@ -2426,6 +2440,7 @@ BuildArg=VERSION=1.0 \
 ```
 
 `test.container`
+
 ```
 [Container]
 Image=test.build
@@ -2441,6 +2456,7 @@ Label=org.test.Key=value
 ```
 
 Example `test.network`:
+
 ```
 [Network]
 Subnet=172.16.0.0/24
@@ -2450,6 +2466,7 @@ Label=org.test.Key=value
 ```
 
 Example `test.artifact` to only pull the artifact using one auth file:
+
 ```
 [Artifact]
 Artifact=quay.io/example/my-artifact:latest
@@ -2460,12 +2477,14 @@ TLSVerify=false
 Example usage where a container depends on an artifact:
 
 `my-artifact.artifact`:
+
 ```
 [Artifact]
 Artifact=quay.io/example/my-config:latest
 ```
 
 `my-app.container`:
+
 ```
 [Container]
 Image=quay.io/example/my-app:latest
@@ -2475,12 +2494,14 @@ Mount=type=artifact,source=my-artifact.artifact,destination=/etc/config
 Example for a container in a Pod:
 
 `test.pod`
+
 ```
 [Pod]
 PodName=test
 ```
 
 `centos.container`
+
 ```
 [Container]
 Image=quay.io/centos/centos:latest
@@ -2491,6 +2512,7 @@ Pod=test.pod
 Example for a Pod with a one-shot startup task:
 
 `test.pod`
+
 ```
 [Pod]
 PodName=test
@@ -2498,6 +2520,7 @@ ExitPolicy=continue
 ```
 
 `startup-task.container`
+
 ```
 [Service]
 Type=oneshot
@@ -2510,6 +2533,7 @@ Exec=sh -c "echo 'setup starting'; sleep 2; echo 'setup complete'"
 ```
 
 `app.container`
+
 ```
 [Unit]
 Requires=startup-task.container
@@ -2548,6 +2572,7 @@ Options=iam_role,endpoint=${AWS_REGION},use_xattr,listobjectsv2,del_cache,use_ca
 ```
 
 ## SEE ALSO
+
 **[systemd.unit(5)](https://www.freedesktop.org/software/systemd/man/systemd.unit.html)**,
 **[systemd.service(5)](https://www.freedesktop.org/software/systemd/man/systemd.service.html)**,
 **[systemd-analyze(1)](https://www.freedesktop.org/software/systemd/man/latest/systemd-analyze.html)**,
