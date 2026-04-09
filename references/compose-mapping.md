@@ -7,6 +7,7 @@ Use this file when converting `docker-compose.yml` or `compose.yaml` into Quadle
 - Model each service first, then decide how to group all resulting containers into one or more `.pod` units.
 - Prefer maintainable Quadlet output over mechanical one-to-one translation.
 - Keep names stable and predictable. Generated filenames should use a shared project prefix.
+- Do not add explicit runtime naming directives such as `PodName=`, `ServiceName=`, `ContainerName=`, or `NetworkName=` by default. Let Quadlet and Podman derive runtime names unless the user explicitly asks for custom naming or a reviewed requirement depends on it.
 - When one deliverable set includes multiple Quadlet files, keep that shared prefix consistent so helper shell scripts can match them by shared-prefix globbing such as `<prefix>*`, instead of hardcoding exact filenames or assuming a fixed file count.
 
 ## Field strategy
@@ -60,6 +61,7 @@ Use this file when converting `docker-compose.yml` or `compose.yaml` into Quadle
 - If the source uses a default network only, you often do not need a `.network` unit at all.
 - If the source uses bridge networking for containers that can reasonably live in one pod, collapse that topology into one `.pod` so the containers share one network namespace.
 - Create a `.network` unit only when services must be split across pods, or when explicit network isolation or custom network management is materially required.
+- Do not add `NetworkName=` by default. Let Quadlet derive the network name unless the user explicitly asks for a custom network name or a reviewed requirement depends on it.
 - Containers in the same `.pod` can communicate over `127.0.0.1` / `localhost` because they share a network namespace.
 - When services in the same `.pod` must accept connections from sibling containers, ensure they listen on `127.0.0.1` or `0.0.0.0`; if they listen only on another interface, sibling containers in the pod may not be able to reach them.
 - When the upstream service supports configuring the listen address via environment variables or equivalent runtime settings, preserve or generate the necessary configuration instead of assuming the default bind address is correct.
@@ -67,6 +69,7 @@ Use this file when converting `docker-compose.yml` or `compose.yaml` into Quadle
 - `AddHost=` is a host-to-IP override, not an intra-pod service-discovery mechanism. Upstream Quadlet documents `AddHost=` in both `[Container]` and `[Pod]`, so do not describe `Pod=` as a blanket prohibition on `AddHost=` unless the upstream reference explicitly requires that for the case at hand.
 - Containers in different pods must not be treated as reachable via `127.0.0.1` / `localhost`.
 - When splitting services across multiple pods or preserving a shared bridge network, use container names, pod names, or explicit `NetworkAlias=` values on the shared network, or publish ports to the host boundary when that is the intended access pattern.
+- Do not add `ServiceName=` or `PodName=` by default. If they are omitted, use Quadlet's derived names unless the user explicitly asks for custom runtime naming or a reviewed requirement depends on it.
 - `ServiceName=` controls the generated systemd unit name only and must not be used as an application-facing network address.
 - `PodName=` controls the Podman pod name only; it can participate in the chosen addressing strategy, but it does not determine the systemd service name.
 
@@ -110,8 +113,9 @@ Use this file when converting `docker-compose.yml` or `compose.yaml` into Quadle
 
 ### `user`
 
-- Map to `User=` and `Group=` in `[Container]` only when it is a container runtime user mapping, not a systemd service user.
+- Do not add `User=` or `Group=` by default. Map them in `[Container]` only when the source explicitly requires a container runtime user mapping or when the user is addressing permission or ownership behavior, and not as a systemd service user substitute.
 - Do not use systemd `User=` to try to make a rootless Quadlet run as another login user.
+- Do not add `UserNS=keep-id` by default. Consider it only when the user is working through rootless permission or ownership behavior and the reviewed topology benefits from preserving host identity semantics.
 
 ### unsupported or risky fields
 

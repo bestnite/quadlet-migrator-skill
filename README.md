@@ -10,6 +10,8 @@ A skill that helps turn `docker run` commands and Docker Compose setups into Pod
 - writes the generated files to the current directory first so you can review them before installing them
 - asks about the output location only when you already requested another location or existing files would conflict
 - helps choose between `.container`, `.pod`, `.network`, `.volume`, and `.build`, usually preferring a pod for related multi-container services
+- avoids adding explicit runtime naming directives such as `PodName=`, `ServiceName=`, `ContainerName=`, and `NetworkName=` by default unless the user asks for them or a reviewed requirement depends on them
+- avoids adding `User=`, `Group=`, or `UserNS=keep-id` by default unless the source explicitly requires them or the user is working through permission or ownership behavior
 - keeps `.env` / `env_file` workflows when they still fit the deployment
 - turns large env templates into a short list of decisions the user actually needs to make
 - can generate helper scripts such as `install.sh`, `uninstall.sh`, `reload.sh`, `start.sh`, `stop.sh`, and `restart.sh`
@@ -28,6 +30,8 @@ A skill that helps turn `docker run` commands and Docker Compose setups into Pod
 - prefer output that is easy to understand and maintain
 - write files to the current directory for review before installation
 - prefer pod-based grouping when it is the clearest fit for a multi-container service
+- let Quadlet and Podman derive runtime names unless reviewed requirements justify explicit naming fields
+- avoid runtime identity-mapping fields unless they are actually needed for the reviewed deployment
 - keep required extra files in the reviewed output and point to them with absolute paths on the host machine instead of copying them into the Quadlet unit directory
 
 ## Operating modes

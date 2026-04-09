@@ -41,9 +41,10 @@ See `podman-systemd.unit.5.md` for the full search-path matrix.
 - `uninstall.sh` should stop affected services before removing their installed unit files, and should not delete support files from the current-directory deliverable set, unrelated files, shared directories, named volumes, images, or Podman objects unless the user explicitly asks for broader cleanup
 - `reload.sh`: run only the appropriate `daemon-reload` command after installation changes
 - `start.sh`, `stop.sh`, `restart.sh`: manage services only and must not silently install or overwrite reviewed files
-- when a generated topology includes `<name>.pod` plus child containers linked with `Pod=<name>.pod`, helper scripts should use the pod service as the lifecycle entrypoint; derive that service name from `ServiceName=` when present on the `.pod`, otherwise use Quadlet's default generated pod service name, instead of duplicating per-container lifecycle commands for child units
+- when a generated topology includes `<name>.pod` plus child containers linked with `Pod=<name>.pod`, helper scripts should use the pod service as the lifecycle entrypoint; derive that service name from `ServiceName=` when present on the `.pod`, otherwise use Quadlet's default generated pod service name. Do not add `ServiceName=` merely to simplify helper scripts, and do not duplicate per-container lifecycle commands for child units
 
 Keep installation separate from service-management scripts so the user can review generated files before applying them.
+Do not add explicit runtime naming directives such as `PodName=`, `ServiceName=`, `ContainerName=`, or `NetworkName=` by default. Use Quadlet's derived names unless the user explicitly asks for custom naming or a reviewed requirement depends on it.
 Do not use `ServiceName=` as an application connection target. It controls the generated systemd unit name only. When services communicate over a shared network outside a single pod namespace, prefer container names, pod names, or explicit `NetworkAlias=` values.
 Within a single pod, use `127.0.0.1` / `localhost` for container-to-container communication instead of generating `AddHost=` entries whose purpose is sibling-container discovery.
 If a service inside the pod must accept connections from sibling containers, ensure its effective listen address is reachable within the shared pod namespace, typically `127.0.0.1` or `0.0.0.0`. When the upstream service exposes this through environment variables or similar runtime configuration, preserve or generate that setting explicitly.
@@ -73,7 +74,7 @@ Execution checklist template before install:
 ## Rootless operational notes
 
 - Bind mounts may hit UID/GID mismatches.
-- For pod-based deployments that should preserve host ownership semantics, consider `UserNS=keep-id` on `[Pod]` when appropriate.
+- Do not add `User=`, `Group=`, or `UserNS=keep-id` by default. Consider them only when the user is working through container permission or ownership behavior, or when the source explicitly requires that runtime identity mapping.
 - If the service must survive logout, mention lingering:
 
 ```bash

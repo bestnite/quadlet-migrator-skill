@@ -16,6 +16,8 @@ This skill helps you:
 - discover Docker deployment entry points from a GitHub repository URL
 - translate `docker run` flags and Compose service fields into Quadlet units
 - choose between `.container`, `.pod`, `.network`, `.volume`, and `.build`, with a pod-first bias for multi-container services
+- avoid explicit naming directives such as `PodName=`, `ServiceName=`, `ContainerName=`, and `NetworkName=` by default; rely on Quadlet and Podman derived names unless the user explicitly asks for custom naming or a reviewed requirement depends on it
+- avoid introducing `User=`, `Group=`, or `UserNS=keep-id` by default; only preserve or add runtime identity mapping when the source explicitly requires it or when the user is addressing permission or ownership behavior
 - decide whether values belong in `Environment=` or `EnvironmentFile=`
 - write reviewable output to the current directory by default, unless the user requested another output directory or an existing-file conflict requires a decision before writing
 - generate helper scripts with `install.sh` as the canonical apply script name, plus `uninstall.sh`, `reload.sh`, `start.sh`, `stop.sh`, and `restart.sh` when producing runnable artifacts, using the reviewed shell templates under `references/template/` as the default source
@@ -129,12 +131,13 @@ Tasks in this phase:
    - if the project is a simple single-container deployment, a standalone `.container` is the default
    - if one logical service contains multiple containers, prefer keeping them in the same `.pod` so they share one network namespace
    - even when the source Compose topology uses bridge networking, prefer pod-based grouping over preserving bridge semantics mechanically
+   - do not add `PodName=`, `ServiceName=`, `ContainerName=`, or `NetworkName=` by default; use Quadlet's derived names unless the user explicitly asked for custom runtime naming or a reviewed requirement depends on it
    - containers in the same `.pod` can communicate over `127.0.0.1` / `localhost` because they share a network namespace
    - when services in the same `.pod` must accept connections from sibling containers, ensure they listen on `127.0.0.1` or `0.0.0.0`; if they listen only on another interface, sibling containers in the pod may not be able to reach them
    - when the upstream service supports configuring the listen address via environment variables or equivalent runtime settings, preserve or generate the necessary configuration instead of assuming the default bind address is correct
    - when `Pod=` is set, never generate `AddHost=` entries whose purpose is sibling-container discovery inside that pod; intra-pod communication must use `127.0.0.1` / `localhost` instead
    - `AddHost=` remains a host-to-IP override, not an intra-pod service-discovery mechanism; because upstream Quadlet supports `AddHost=` in both `[Container]` and `[Pod]`, do not claim that `Pod=` categorically forbids `AddHost=` unless the upstream reference says so for the specific case
-   - when containers are attached with `Pod=<name>.pod`, treat the pod's generated systemd service as the primary lifecycle unit; derive that service name from `ServiceName=` when present on the `.pod`, otherwise use Quadlet's default generated pod service name. Starting that pod service brings up the pod-managed containers, so do not add redundant per-container start commands for those child units in helper scripts
+   - when containers are attached with `Pod=<name>.pod`, treat the pod's generated systemd service as the primary lifecycle unit; derive that service name from `ServiceName=` when present on the `.pod`, otherwise use Quadlet's default generated pod service name. Do not introduce `ServiceName=` merely to simplify helper scripts. Starting that pod service brings up the pod-managed containers, so do not add redundant per-container start commands for those child units in helper scripts
    - containers in different pods must not be treated as reachable via `127.0.0.1` / `localhost`; if you split the topology across multiple pods or preserve a shared bridge network, use container names, pod names, or explicit `NetworkAlias=` values on the shared network instead
    - `ServiceName=` controls the generated systemd unit name only and must not be treated as an application-facing network address
    - `PodName=` controls the Podman pod name only and may be part of the chosen addressing strategy, but it does not determine the systemd service name
@@ -162,6 +165,7 @@ Tasks in this phase:
    - use `EnvironmentFile=` for bulk variables, secrets, or values already sourced from `.env` / `env_file`
    - if Compose interpolation references variables that are missing, report them explicitly and prepare a candidate env file with placeholders or suggested defaults instead of delegating the entire review back to the user
    - treat variable names containing `PASSWORD`, `TOKEN`, `SECRET`, `KEY`, `PRIVATE`, or `PASS` as sensitive by default and avoid inlining unless the user explicitly wants that
+   - do not introduce `User=`, `Group=`, or `UserNS=keep-id` as part of the default generated shape; only preserve or add them when the source explicitly requires a runtime identity mapping or when the user is addressing permission or ownership behavior
    - do not treat a variable as satisfied unless it is present in an actual final source such as `Environment=`, the final `EnvironmentFile=`, or an explicitly preserved default
    - if a likely required startup variable is still absent from the final output, keep it unresolved instead of downgrading it to an informational note
    - if referenced env keys and final env keys contain likely near-match typos, call them out explicitly before execution
