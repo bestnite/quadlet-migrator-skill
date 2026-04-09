@@ -2,69 +2,65 @@
 
 [English](./README.md) | [简体中文](./README.zh-CN.md)
 
-一个 skill，用来把 `docker run` 命令和 Docker Compose 配置转换成可审阅、可调整、可应用的 Podman Quadlet 文件。
+Quadlet Migrator 是一个把 Docker 部署输入转换为 Podman Quadlet 输出的 skill。
 
-## 功能概览
+## 功能
 
-- 将 `docker run` 命令和 Docker Compose 配置转换成 Podman Quadlet 文件
-- 默认先把生成文件写到当前目录，方便你在安装前先审阅
-- 只有在你已经指定其他位置，或现有文件会发生冲突时，才询问输出位置
-- 帮助在 `.container`、`.pod`、`.network`、`.volume`、`.build` 之间做选择；对有关联的多容器服务，通常优先用 pod
-- 默认不添加 `PodName=`、`ServiceName=`、`ContainerName=`、`NetworkName=` 这类显式运行时命名字段，除非用户要求或审阅后的需求确实依赖它们
-- 默认不添加 `User=`、`Group=`、`UserNS=keep-id`，除非源配置明确要求，或用户正在处理权限 / 属主相关行为
-- 在合适时保留 `.env` / `env_file` 工作流
-- 把庞杂的 env 模板收敛成用户真正需要确认的少量问题
-- 可生成辅助脚本，例如 `install.sh`、`uninstall.sh`、`reload.sh`、`start.sh`、`stop.sh`、`restart.sh`
-- 识别服务运行时仍需要的项目内文件，例如挂载配置、初始化数据和辅助脚本
-- 在声称结果可运行前，检查 env 文件是否完整
-- 在 planning 阶段先确认关键部署决策，并在审阅和执行阶段使用清晰的检查清单
-- 当所选镜像使用包含仓库地址的完整镜像名时，例如 `docker.io/...` 或 `ghcr.io/...`，可选规划 `AutoUpdate=registry`
-- 说明 rootless / rootful 安装路径、部署说明和验证步骤
+- 将 `docker run` 命令转换为 Quadlet 单元文件
+- 将 Docker Compose 配置转换为 Quadlet 部署结果
+- 分析 GitHub 仓库中的自托管部署文件
+- 在部署需要时保留 env 文件、挂载配置、初始化资产和辅助脚本
+- 将庞杂的 env 模板整理成少量部署决策
+- 提供部署、验证和排障指引
 
-## 设计原则
+## 适用场景
 
-- 用能满足需求的最简单模式
-- 将 planning、审阅、生成文件分成独立步骤
-- 不虚构部署相关取值
-- 如果映射会带来行为变化，要明确说出来
-- 优先产出容易理解、容易维护的结果
-- 先把文件写到当前目录审阅，再决定是否安装
-- 对多容器服务，如果用 pod 更清晰，就优先用 pod
-- 默认让 Quadlet 和 Podman 自行派生运行时名称，只有在审阅后确认确有必要时才显式命名
-- 默认避免引入运行时身份映射字段，只有在当前部署确实需要时才添加
-- 运行仍需要的额外文件保留在已审阅的输出中，并通过主机上的绝对路径引用，而不是复制进 Quadlet 单元目录
+适合在这些场景中使用：
 
-## 运行模式
+- 将服务从 Docker 迁移到 Podman Quadlet
+- 将 Compose 栈转换为 Quadlet 布局
+- 审查仓库中的自托管部署文件
+- 先生成文件审阅，再决定是否安装
+- 验证或排查生成后的 Quadlet 文件
 
-- `advice`：解释映射方式、审查输入，或回答定向问题，不写最终文件
-- `design`：执行 planning 和最后一轮交互式审阅，但在生成可运行文件前停止
-- `generate`：执行 planning、最后一轮交互式审阅和 execution，然后生成已批准的可运行文件
+## 使用方式
 
-## 工作流
+1. 提供一种输入：
+   - 一条 `docker run` 命令
+   - 一个 Compose 文件或 Compose 项目
+   - 一个 GitHub 仓库 URL
+   - 一组需要审查或清理的现有 Quadlet 文件
+2. 说明你的目标：
+   - 映射建议
+   - 部署设计
+   - 可审阅的可运行结果
+3. 确认域名、主机路径、凭据、存储方案或可选服务等部署取值。
+4. 在应用前审阅生成结果。
 
-工作流分为三个阶段：`Planning`、`Finalize`、`Execution`。
+## 示例请求
 
-- `advice` 通常停留在 `Planning`，或直接回答一个聚焦的问题
-- `design` 包含 `Planning` 和 `Finalize`
-- `generate` 包含全部三个阶段
+```text
+把这条 docker run 命令转换成 Quadlet，并解释映射关系。
 
-Planning 用来收集并确认仍未决定的部署问题。
-Finalize 是在这些问题讨论清楚之后进行的对话式审阅。
-只有在用户批准这次审阅后，才进入 Execution。
+审查这个 compose.yaml，并给出一个 Podman Quadlet 布局方案。
 
-## 文档说明
+根据这个仓库的自托管部署生成可审阅的 Quadlet 文件。
 
-- `SKILL.md`：运行模式、工作流和高层规则
-- `references/compose-mapping.md`：Compose 字段映射与拓扑决策
-- `references/env-strategy.md`：env 处理、完整性校验与 typo 检测
-- `references/github-repo-intake.md`：说明 skill 如何找到正确的仓库入口
-- `references/deployment-notes.md`：部署说明
-- `references/validation.md`：验证与排障
-- `references/template/`：用于稳定处理 Quadlet 文件与 lifecycle 管理的简洁 helper script 模板目录
+帮我把这套服务迁移到 rootless Podman，并保留 env-file 工作流。
+```
 
-## 限制
+## 常见产物
 
-本 skill 不保证 Docker Compose 语义与 Podman Quadlet 语义完全等价。
+- Quadlet 单元文件
+- env 文件或 env 增量文件
+- 用于 install、reload、start、stop、restart、uninstall 的辅助脚本
+- 部署说明与验证指引
+
+## 说明
+
+- 在安装前审阅生成结果。
+- 对部署相关取值先确认，再生成结果。
+- Docker Compose 与 Quadlet 不完全等价时，要明确说明行为变化。
 
 ## 许可证
 
