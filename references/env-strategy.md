@@ -162,20 +162,19 @@ Recommended behavior:
 - ask the user only for high-impact values such as domain, storage path, or database password
 - generate a candidate `.env` or env delta with clear placeholders for the unresolved items
 
-### Required variable still missing
+### Required startup variable still missing
 
 Source intent:
 
 ```ini
 [Container]
-EnvironmentFile=/home/nite/pod/dify/dify.env
-Environment=POSTGRES_USER=postgres
-Environment=POSTGRES_DB=dify
-Environment=PGDATA=/var/lib/postgresql/data/pgdata
+EnvironmentFile=/home/nite/pod/myapp/myapp.env
+Environment=APP_ENV=production
+Environment=APP_PORT=8080
 ```
 
-If `dify.env` does not contain `POSTGRES_PASSWORD`, do not treat this as runnable output.
-Report `POSTGRES_PASSWORD` as unresolved and stop before final runnable generation.
+If `myapp.env` does not contain `APP_SECRET`, do not treat this as runnable output.
+Report `APP_SECRET` as unresolved and stop before final runnable generation.
 
 ## Output patterns
 

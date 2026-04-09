@@ -33,7 +33,7 @@ Use this file when converting `docker-compose.yml` or `compose.yaml` into Quadle
 - Use these rules when filling in Docker Hub references:
   - `redis:7` -> `docker.io/library/redis:7`
   - `nginx` -> `docker.io/library/nginx`
-  - `langgenius/dify-api:latest` -> `docker.io/langgenius/dify-api:latest`
+  - `examplecorp/api:latest` -> `docker.io/examplecorp/api:latest`
 - Do not guess `docker.io/library/...` for images that already include a namespace.
 
 ### `services.<name>.build`
