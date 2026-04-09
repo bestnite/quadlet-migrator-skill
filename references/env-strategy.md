@@ -2,6 +2,15 @@
 
 Use this file whenever the migration includes `.env`, `env_file`, Compose interpolation, or inline `-e` flags.
 
+## Contents
+
+- Goals
+- Default rules
+- Sensitive values
+- Interpolation
+- Completeness validation
+- Examples and checklists
+
 ## Goals
 
 - preserve source-of-truth for variables

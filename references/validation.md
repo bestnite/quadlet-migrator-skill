@@ -2,16 +2,30 @@
 
 Use this file when the user asks how to verify or troubleshoot generated Quadlet units.
 
-## Basic deployment flow
+## Contents
 
-1. Review the generated files in the current working directory by default, or in another user-requested output directory, and confirm the expected Quadlet units, env files, helper scripts, and required repo-local support files exist.
-2. Confirm the user has already reviewed the finalize snapshot and approved execution, or requested edits that were incorporated before writing runnable artifacts.
+- Validation flow
+- Verification commands
+- Runnable-output checks
+- Common failure causes
+- Troubleshooting posture
+
+## Validation Flow
+
+Validation belongs after execution, after the reviewed Quadlet files have been applied to a valid Quadlet directory, and while the referenced support files still exist at the host paths used by the generated units.
+
+Recommended validation flow:
+
+1. Confirm the user already reviewed the finalize snapshot and approved execution.
+2. Confirm the generated deliverable set contains the expected Quadlet units, env files, helper scripts, and required support files.
 3. Run `install.sh` to copy only the reviewed Quadlet unit files into the target Quadlet directory.
 4. Run the appropriate reload command.
 5. Start the relevant units and inspect their status.
 6. If needed, run `uninstall.sh` to remove the installed reviewed artifact set before regenerating or abandoning the deployment.
 
 If the user requested an alternate apply script name explicitly, substitute that name where needed, but treat `install.sh` as the default documentation path.
+
+## Verification Commands
 
 ### Rootless
 
@@ -29,7 +43,7 @@ systemctl start <unit>
 systemctl status <unit>
 ```
 
-## Generator debugging
+### Generator debugging
 
 Use the Podman systemd generator dry run when units fail to appear or options look unsupported.
 
@@ -43,7 +57,7 @@ For rootless debugging:
 /usr/lib/systemd/system-generators/podman-system-generator --user --dryrun
 ```
 
-## Systemd verification
+### Systemd verification
 
 ```bash
 systemd-analyze verify <unit>.service
@@ -55,16 +69,16 @@ For user units:
 systemd-analyze --user verify <unit>.service
 ```
 
-## Support-file and env checks
+## Runnable-Output Checks
 
 Before calling the result runnable, verify that:
 
 - every referenced `EnvironmentFile=` exists at the path referenced by the installed unit
-- required env keys are actually present in the final env sources, or are explicitly surfaced as unresolved placeholders
+- required env keys are present in the final env sources, or are explicitly surfaced as unresolved placeholders
 - bind-mounted files and directories exist at the absolute paths referenced by the generated Quadlet files
 - bind-mounted file-versus-directory shape still matches the source input
 - if `AutoUpdate=registry` is enabled, the generated unit uses a fully qualified image reference
-- when sibling containers in the same pod must connect to a service, its effective listen address is reachable within the pod namespace (`127.0.0.1` or `0.0.0.0`, unless upstream docs require another reachable bind address)
+- when sibling containers in the same pod must connect to a service, its effective listen address is reachable within the pod namespace (`127.0.0.1` or `0.0.0.0`, unless upstream docs require another reviewed bind address)
 - repo-local entrypoint or helper scripts referenced by the container exist and are executable when needed
 - initialization assets such as `init.sql`, seeds, bootstrap files, or config templates are present where the deployment expects them
 - service-management scripts operate on the same reviewed artifact set that finalize approved
@@ -86,7 +100,7 @@ Runnable-output gate checklist template:
 
 Do not call the result runnable until every item above is checked.
 
-## Common failure causes
+## Common Failure Causes
 
 - unsupported Quadlet option for the installed Podman version
 - `AutoUpdate=registry` was enabled but the image reference is not fully qualified
@@ -100,7 +114,7 @@ Do not call the result runnable until every item above is checked.
 - permissions on rootless bind mounts
 - readiness assumptions hidden behind `depends_on`
 
-## Troubleshooting posture
+## Troubleshooting Posture
 
 When validation fails, report:
 
@@ -108,9 +122,3 @@ When validation fails, report:
 - what was applied successfully
 - what failed to generate, apply, or start
 - whether the issue is syntax, unsupported feature, path resolution, installation path, missing support files, missing env keys, or permissions
-
-## Relationship to execution phase
-
-Validation belongs after the files are written in the execution phase, the Quadlet units are applied to a valid Quadlet directory, and the referenced support files remain available at the absolute host paths used by the generated units.
-
-Before execution, the skill should already have completed planning and finalize review with the user. Do not treat validation as a substitute for design review.

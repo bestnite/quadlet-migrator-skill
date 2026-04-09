@@ -2,6 +2,15 @@
 
 Use this file when the user provides a GitHub repository URL and expects you to find the deployment inputs yourself.
 
+## Contents
+
+- Goal
+- Discovery order
+- What to extract
+- Heuristics
+- Support-file checklist
+- Reporting expectations
+
 ## Goal
 
 Discover the canonical self-hosting assets before attempting any Quadlet conversion.
@@ -56,7 +65,7 @@ Discover the canonical self-hosting assets before attempting any Quadlet convers
 - Do not reduce runnable output to only Quadlet plus env when the source project depends on additional repo-local assets.
 - If several candidate compose files exist, explain which one you selected and why.
 
-## Support-file checklist template
+## Support-file checklist
 
 Before choosing the final source of truth, confirm:
 
@@ -68,7 +77,7 @@ Before choosing the final source of truth, confirm:
 
 Use this checklist to prevent reducing the deliverable to Quadlet plus env when the source project depends on more than that.
 
-## Migration posture for GitHub-sourced projects
+## Reporting expectations
 
 When converting a GitHub-hosted project, report:
 
