@@ -51,7 +51,12 @@ In planning:
 4. Identify unresolved deployment decisions and ask the user about them.
 5. Summarize what you learned and state the proposed reviewable output location before moving on.
 
-Planning is where you must ask about unresolved high-impact values such as domains, host paths, credentials, storage choices, optional services, deployment mode, and output-location conflicts.
+Planning is where you must ask about unresolved high-impact values. The following must be explicitly confirmed before leaving planning:
+
+- **Deployment mode** (rootless vs rootful) — determines Quadlet target directory, systemctl scope, linger requirement, and helper-script behavior.
+- **Volume strategy** (named volume vs bind mount vs `.volume` unit) — determines whether `.volume` files are generated and how mount paths are written.
+- Domains, host paths, credentials, optional services, and output-location conflicts.
+- **Host port availability** — when `PublishPort=` is used, detect whether the host-side port is already occupied before proceeding.
 
 If the source has many env variables, reduce them to a small decision list instead of dumping raw templates back to the user.
 
@@ -76,6 +81,8 @@ Do not start execution until the user has reviewed and confirmed the finalize sn
 
 Goal: write the approved artifacts.
 
+Before writing any file, confirm that the user has explicitly approved the finalize snapshot. If the finalize phase was skipped or the user has not confirmed, stop and ask.
+
 In execution:
 
 1. Generate the approved Quadlet files.
@@ -98,9 +105,14 @@ Stop and ask the user before finalizing or generating runnable output when any o
 - required support files or directories referenced by mounts, docs, commands, or scripts
 - required env values for minimal startup
 - likely env-key typos or mismatches
+- host port conflicts when `PublishPort=` is used — detect occupied host ports before finalizing
+- unresolved deployment mode (rootless vs rootful)
+- unresolved volume strategy (named volume vs bind mount vs `.volume` unit)
 - a mismatch between deployment mode and the intended operator model or file locations
 
 Do not keep moving forward by guessing through these gaps.
+
+If a structured input tool is unavailable, ask the user directly in conversation before proceeding. Do not substitute defaults for unresolved high-impact decisions.
 
 ## Decision Priority
 

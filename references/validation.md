@@ -97,6 +97,7 @@ Runnable-output gate checklist template:
 - [ ] intra-pod service listeners that must accept sibling-container traffic are reachable on `127.0.0.1` or `0.0.0.0`, unless upstream docs require another reviewed bind address
 - [ ] service-management scripts operate on the same artifact set that was reviewed
 - [ ] no required support file, env key, or typo-suspect mismatch remains unresolved
+- [ ] host-side `PublishPort=` ports are free on the target host
 
 Do not call the result runnable until every item above is checked.
 
@@ -113,6 +114,7 @@ Do not call the result runnable until every item above is checked.
 - required repo-local config, init assets, or helper scripts missing from the installed artifact set
 - permissions on rootless bind mounts
 - readiness assumptions hidden behind `depends_on`
+- host port already in use by another service or process, causing `PublishPort=` binding to fail at start
 
 ## Troubleshooting Posture
 

@@ -51,6 +51,7 @@ Use this file when converting `docker-compose.yml` or `compose.yaml` into Quadle
 
 - For a standalone service, map to `PublishPort=` on the `.container`.
 - For a pod-based topology, prefer `PublishPort=` on the `.pod` when the published ports belong to the pod boundary rather than one child container.
+- When `PublishPort=` maps a host-side port, detect whether that host port is already in use before finalizing the mapping. Check for TCP/UDP listeners on the host using an available port-detection method. If a conflict is found, stop and ask the user whether to change the host port, skip the mapping, or resolve the conflict manually. Do not silently remap occupied host ports to an alternative.
 
 ### `volumes`
 
