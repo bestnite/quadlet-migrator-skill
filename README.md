@@ -13,6 +13,12 @@ Quadlet Migrator is a skill for converting Docker-based deployment input into Po
 - turns large env templates into a short list of deployment decisions
 - provides deployment, validation, and troubleshooting guidance
 
+## Installation
+
+```bash
+npx skills add bestnite/quadlet-migrator-skill -g
+```
+
 ## When To Use It
 
 Use this skill when you want to:

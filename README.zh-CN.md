@@ -13,6 +13,12 @@ Quadlet Migrator 是一个把 Docker 部署输入转换为 Podman Quadlet 输出
 - 将庞杂的 env 模板整理成少量部署决策
 - 提供部署、验证和排障指引
 
+## 安装
+
+```bash
+npx skills add bestnite/quadlet-migrator-skill -g
+```
+
 ## 适用场景
 
 适合在这些场景中使用：
